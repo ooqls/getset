@@ -1,0 +1,7 @@
+package: gen
+generate:
+  gin-server: true
+  models: true
+import-mapping:
+  schemas.yaml: "github.com/ooqls/getset/log/api/v1/gen"
+output: ../api/gin/v1/gen/gen.go

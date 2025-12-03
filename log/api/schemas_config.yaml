@@ -1,0 +1,6 @@
+package: gen
+generate:
+  models: true
+output-options:
+  skip-prune: true
+output: ../api/v1/gen/gen.go

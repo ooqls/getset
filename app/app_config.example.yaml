@@ -1,0 +1,41 @@
+# Example configuration for the Go App
+logging_api:
+  enabled: true  # Enable or disable the logging API
+
+docs:
+  enabled: true  # Enable or disable docs
+  docs_api_path: "/api/docs"  # Path for docs API
+  docs_dir: "./docs"           # Directory containing documentation files
+
+server:
+  enabled: true  # Enable or disable the server
+  port: 8080     # Port for the server to listen on
+
+tls:
+  enabled: false      # Enable or disable TLS
+  ca_path: ""         # Path to CA certificate (optional)
+  cert_file: ""       # Path to TLS certificate file
+  key_file: ""        # Path to TLS key file
+
+jwt:
+  enabled: true                # Enable or disable JWT authentication
+  rsa_key_path: "./keys/private.pem"      # Path to RSA private key
+  rsa_pub_key_path: "./keys/public.pem"   # Path to RSA public key
+  token_configuration_paths:
+    - "./config/token1.yaml"   # List of token configuration file paths
+    - "./config/token2.yaml"
+
+sql:
+  enabled: true                # Enable or disable SQL file loading
+  sql_files_dir: "./sql"      # Directory containing SQL files
+  sql_files:
+    - "init.sql"              # List of SQL files to load
+    - "data.sql"
+  create_table_stmts:
+    - "CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY, name TEXT);"  # Example table creation
+  create_index_stmts:
+    - "CREATE INDEX idx_users_name ON users(name);"  # Example index creation
+
+registry:
+  enabled: false               # Enable or disable registry
+  path: "./registry.db"        # Path to registry file 

@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: Logging api Specification
+  description: This is an API for configuring logging settings.
+  version: 1.0.0
+
+paths:
+  /v1/logging/config:
+    get:
+      summary: Get the current logging configuration
+      operationId: getLoggingConfig
+      responses:
+        '200':
+          description: Successful response with the current logging configuration
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yaml#/components/schemas/LoggingConfig'
+  /v1/logging/level/{level}:
+    put:
+      summary: Update the logging level
+      operationId: updateLoggingLevel
+      parameters:
+        - in: path
+          name: level
+          schema:
+            $ref: 'schemas.yaml#/components/schemas/LevelEnum'
+          required: true
+          description: The logging level to set
+      responses:
+        '200':
+          description: Successful response with the current logging level
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yaml#/components/schemas/LevelEnum'
+  /v1/logging/format/{format}:
+    put:
+      summary: Update the logging format
+      operationId: updateLoggingFormat
+      parameters:
+        - in: path
+          name: format
+          schema:
+            $ref: 'schemas.yaml#/components/schemas/FormatEnum'
+          required: true
+          description: The logging format to set
+      responses:
+        '200':
+          description: Successful response with the current logging format
+          content:
+            application/json:
+              schema:
+                $ref: 'schemas.yaml#/components/schemas/FormatEnum'

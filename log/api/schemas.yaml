@@ -1,0 +1,29 @@
+openapi: 3.0.0
+info:
+  title: API
+  version: 1.0.0
+  description: API for logging configuration
+components:
+  schemas:
+    LoggingConfig:
+      type: object
+      properties:
+        level:
+          $ref: '#/components/schemas/LevelEnum'
+        format:
+          $ref: '#/components/schemas/FormatEnum'
+      required:
+      - level
+      - format
+    LevelEnum:
+      type: string
+      enum:
+        - DEBUG
+        - INFO
+        - WARNING
+        - ERROR
+    FormatEnum:
+      type: string
+      enum:
+        - JSON
+        - TEXT
