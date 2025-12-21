@@ -10,6 +10,7 @@ import (
 	"github.com/ooqls/getset/cache/cache"
 	"github.com/ooqls/getset/db/containers"
 	"github.com/ooqls/getset/db/redis"
+	"github.com/ooqls/getset/db/valkey"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,4 +108,48 @@ func TestMemStore_Get_NotFound(t *testing.T) {
 	var obj Obj
 	err := store.Get(context.Background(), "key", &obj)
 	assert.True(t, cache.IsCacheMissErr(err))
+}
+
+func TestValkeyStore(t *testing.T) {
+	ctx := context.Background()
+	valkeyContainer := containers.StartValkey(context.Background())
+	defer func() {
+		if err := valkeyContainer.Terminate(context.Background()); err != nil {
+			log.Fatalf("failed to terminate valkey container: %v", err)
+		}
+	}()
+	Register(Obj{}, MyAlias{})
+
+	var store GenericInterface = NewValkeyStore("test", valkey.GetConnection(ctx), 450*time.Second)
+
+	err := store.Get(context.Background(), "key", &Obj{})
+	assert.NotNilf(t, err, "expected cache miss error, got %v", err)
+	assert.True(t, cache.IsCacheMissErr(err))
+
+	obj := Obj{V: "value", Ts: time.Now(), id: uuid.New()}
+	err = store.Set(context.Background(), "key", obj)
+	assert.Nil(t, err)
+
+	var updatedObj Obj
+	err = store.Get(context.Background(), "key", &updatedObj)
+	assert.Nil(t, err)
+	assert.Equal(t, obj.V, updatedObj.V)
+
+	err = store.Update(context.Background(), "key", func(fn func(target any) error) (any, error) {
+		var obj Obj
+
+		err := fn(&obj)
+		assert.Nil(t, err)
+
+		obj.V = "updated value"
+		obj.Ts = time.Now()
+		obj.id = uuid.New()
+		return obj, nil
+	})
+	assert.Nil(t, err)
+
+	var updatedObj2 Obj
+	err = store.Get(context.Background(), "key", &updatedObj2)
+	assert.Nil(t, err)
+	assert.Equal(t, "updated value", updatedObj2.V)
 }

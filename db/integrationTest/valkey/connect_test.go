@@ -2,6 +2,7 @@ package valkey
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ func TestMain(m *testing.M) {
 	defer cont.Stop(context.Background(), &timeout)
 
 	m.Run()
+	os.Exit(0)
 }
 
 func TestConnectValkey(t *testing.T) {

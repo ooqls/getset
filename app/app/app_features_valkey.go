@@ -48,7 +48,7 @@ type valkeyOpt struct {
 }
 
 func Valkey(opts ...valkeyOpt) ValkeyFeature {
-	r := registry.Get()
+	r := registry.Get()	
 
 	valkeyDb := registry.Database{}
 	if r.Valkey != nil {

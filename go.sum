@@ -64,6 +64,8 @@ github.com/eko/gocache/store/go_cache/v4 v4.2.3 h1:9F2mN6+6LEnFTR/wzc2zRMl8iV3Hw
 github.com/eko/gocache/store/go_cache/v4 v4.2.3/go.mod h1:oZcTjIjtHiCKCFS5KfxFrcmHFJKJd3wCNwuYeqWBuhI=
 github.com/eko/gocache/store/redis/v4 v4.2.5 h1:jvoxr70KqV6F6ppIAP/KHKDnDCQVJKQjxdJ2uRT/AJU=
 github.com/eko/gocache/store/redis/v4 v4.2.5/go.mod h1:0PMef3sy4AonKqrxdnUsIKDAMtqNyJI4e6asTo00XrE=
+github.com/eko/gocache/store/valkey/v4 v4.0.0-20251210114255-199a1cf8811d h1:qcrz5U79xDIizONWBb3dXjBJuT68Ky+DYakQs0HqumM=
+github.com/eko/gocache/store/valkey/v4 v4.0.0-20251210114255-199a1cf8811d/go.mod h1:2KCY9/sGy+y9lxkdWjLc7ZjOCyepjhxewAjA40jsYz8=
 github.com/elastic/elastic-transport-go/v8 v8.8.0 h1:7k1Ua+qluFr6p1jfJjGDl97ssJS/P7cHNInzfxgBQAo=
 github.com/elastic/elastic-transport-go/v8 v8.8.0/go.mod h1:YLHer5cj0csTzNFXoNQ8qhtGY1GTvSqPnKWKaqQE3Hk=
 github.com/elastic/go-elasticsearch/v8 v8.19.0 h1:VmfBLNRORY7RZL+9hTxBD97ehl9H8Nxf2QigDh6HuMU=
@@ -241,6 +243,8 @@ github.com/urfave/cli v1.22.17 h1:SYzXoiPfQjHBbkYxbew5prZHS1TOLT3ierW8SYLqtVQ=
 github.com/urfave/cli v1.22.17/go.mod h1:b0ht0aqgH/6pBYzzxURyrM4xXNgsoT/n2ZzwQiEhNVo=
 github.com/valkey-io/valkey-go v1.0.68 h1:bTbfonp49b41DqrF30q+y2JL3gcbjd2IiacFAtO4JBA=
 github.com/valkey-io/valkey-go v1.0.68/go.mod h1:bHmwjIEOrGq/ubOJfh5uMRs7Xj6mV3mQ/ZXUbmqpjqY=
+github.com/valkey-io/valkey-go/valkeycompat v1.0.59 h1:u9EDpfIv3CxsXYOgd4sZTmaL2UH/av8DtSfCRo7m6PE=
+github.com/valkey-io/valkey-go/valkeycompat v1.0.59/go.mod h1:O1+VUjvMYhsaG5jDrqu0j+Y+5qvHsZABQcYnlJHiNQU=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=

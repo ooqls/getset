@@ -5,8 +5,9 @@ import (
 
 	"github.com/eko/gocache/lib/v4/store"
 	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go"
 )
 
 func IsCacheMissErr(err error) bool {
-	return errors.Is(err, redis.Nil) || errors.Is(err, store.NotFound{})
+	return errors.Is(err, redis.Nil) || errors.Is(err, valkey.Nil) || errors.Is(err, store.NotFound{})
 }

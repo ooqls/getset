@@ -6,6 +6,7 @@ import (
 	"github.com/ooqls/getset/cache/cache"
 	"github.com/ooqls/getset/cache/store"
 	"github.com/redis/go-redis/v9"
+	"github.com/valkey-io/valkey-go"
 )
 
 type CacheFactory interface {
@@ -41,4 +42,22 @@ func (f *MemCacheFactory) NewCache(key string, ttl time.Duration) cache.GenericC
 
 func (f *MemCacheFactory) NewStore(key string, ttl time.Duration) store.GenericInterface {
 	return store.NewMemStore(key, ttl)
+}
+
+func NewValkeyCacheFactory(c valkey.Client) CacheFactory {
+	return &ValkeyCacheFactory{
+		valkey: c,
+	}
+}
+
+type ValkeyCacheFactory struct {
+	valkey valkey.Client
+}
+
+func (f *ValkeyCacheFactory) NewCache(key string, ttl time.Duration) cache.GenericCache {
+	return *cache.NewGenericCache(key, cache.NewValkeyCache(f.valkey, ttl))
+}
+
+func (f *ValkeyCacheFactory) NewStore(key string, ttl time.Duration) store.GenericInterface {
+	return store.NewValkeyStore(key, f.valkey, ttl)
 }
