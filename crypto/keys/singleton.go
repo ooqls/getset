@@ -80,8 +80,6 @@ func SetRSA(k Key) {
 	rsaKey = k
 }
 
-
-
 func InitJwt(privKey []byte, pubKey []byte) error {
 	m.Lock()
 	defer m.Unlock()

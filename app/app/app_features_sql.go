@@ -4,7 +4,6 @@ import "strings"
 
 type sqlPackage string
 
-
 // flags
 var sqlFilesFlag string
 

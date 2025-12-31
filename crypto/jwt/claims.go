@@ -5,12 +5,11 @@ import (
 )
 
 type TokenRequest struct {
-	Subject string
+	Subject      string
 	CustomClaims interface{}
 }
 
 type ClaimsWrapper[C any] struct {
 	jwt.RegisteredClaims
 	CustomClaims C `json:"custom_claims"`
-
 }

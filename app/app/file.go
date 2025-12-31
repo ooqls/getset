@@ -21,5 +21,3 @@ func mustReadFile(p string) []byte {
 
 	return b
 }
-
-

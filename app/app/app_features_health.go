@@ -1,7 +1,7 @@
 package app
 
 const (
-	health_pathOpt string = "opt-health-path"
+	health_pathOpt     string = "opt-health-path"
 	health_intervalOpt string = "opt-health-interval"
 )
 
@@ -38,7 +38,7 @@ type HealthFeature struct {
 func (f *HealthFeature) apply(opt healthOpt) {
 	switch opt.key {
 	case health_pathOpt:
-		f.Path = opt.value.(string)	
+		f.Path = opt.value.(string)
 	case health_intervalOpt:
 		f.Interval = opt.value.(int)
 	}

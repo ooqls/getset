@@ -563,6 +563,11 @@ func (a *app) _startup(ctx context.Context) error {
 		startup_funcs = append(startup_funcs, a._startup_health)
 	}
 
+	if a.features.Valkey.Enabled {
+		l.Info("[Startup] Valkey enabled")
+		startup_funcs = append(startup_funcs, a._startup_valkey)
+	}
+
 	appCtx := NewAppContext(ctx, a.l)
 	for _, f := range startup_funcs {
 		err := f(appCtx)

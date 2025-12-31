@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	http_portOpt   string = "opt-http-port"
-	http_muxOpt    string = "opt-http-mux"
+	http_portOpt string = "opt-http-port"
+	http_muxOpt  string = "opt-http-mux"
 )
 
 type httpOpt struct {

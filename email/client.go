@@ -34,8 +34,8 @@ const (
 )
 
 // type SMSClient interface {
-	// SendSMS(ctx context.Context, phoneNumber string, message string) error
-	// SendTemplatedSMS(ctx context.Context, phoneNumber string, template Template) error
+// SendSMS(ctx context.Context, phoneNumber string, message string) error
+// SendTemplatedSMS(ctx context.Context, phoneNumber string, template Template) error
 // }
 
 type EmailClient interface {
@@ -44,5 +44,5 @@ type EmailClient interface {
 }
 
 // type PushNotificationClient interface {
-	// SendPushNotification(ctx context.Context, subject, message string) error
+// SendPushNotification(ctx context.Context, subject, message string) error
 // }

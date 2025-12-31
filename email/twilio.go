@@ -106,8 +106,8 @@ func applyEmailOption(m *mail.SGMailV3, o EmailOpt) {
 }
 
 func (cli *TwilioEmail) SendTemplatedEmail(
-	ctx context.Context, 
-	recep EmailRecepient, 
+	ctx context.Context,
+	recep EmailRecepient,
 	subject string,
 	template Template,
 	opts ...EmailOpt) error {

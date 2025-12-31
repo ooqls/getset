@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -32,6 +33,15 @@ func TestApp(t *testing.T) {
 	}()
 	err := app.Run(ctx)
 	assert.Nilf(t, err, "expected no error, got %v", err)
+}
+
+func TestAppWithError(t *testing.T) {
+	app := New("test", Features{})
+	app.OnStartup(func(ctx *AppContext) error {
+		return fmt.Errorf("test error")
+	})
+	err := app.Run(context.Background())
+	assert.NotNilf(t, err, "expected error, got %v", err)
 }
 
 func TestAppWithRegistry(t *testing.T) {

@@ -8,5 +8,3 @@ type Key interface {
 	PublicKey() (rsa.PublicKey, []byte)
 	PrivateKey() (rsa.PrivateKey, []byte)
 }
-
-

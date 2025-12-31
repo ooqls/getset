@@ -57,8 +57,8 @@ type PCG32 struct {
 
 func NewPCG32(seed, seq uint64) *PCG32 {
 	p := &PCG32{
-		m: &sync.Mutex{},
-		inc: (seq << 1) | 1,
+		m:     &sync.Mutex{},
+		inc:   (seq << 1) | 1,
 		state: 0,
 	}
 	p.Seed(seed, seq)

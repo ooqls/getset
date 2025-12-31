@@ -29,9 +29,9 @@ func (f *LoggingApiFeature) apply(opt loggingApiOpt) {
 func LoggingApi(opts ...loggingApiOpt) LoggingApiFeature {
 	f := LoggingApiFeature{
 		Enabled: true,
-		Port: loggingApiPortFlag,
+		Port:    loggingApiPortFlag,
 	}
-	
+
 	for _, opt := range opts {
 		f.apply(opt)
 	}

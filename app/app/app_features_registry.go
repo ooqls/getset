@@ -12,9 +12,9 @@ type registryOpt struct {
 
 func WithRegistryPath(p string) registryOpt {
 	return registryOpt{featureOpt: featureOpt{
-			key: registry_pathOpt,
-			value: &p,
-		},
+		key:   registry_pathOpt,
+		value: &p,
+	},
 	}
 }
 
@@ -40,7 +40,7 @@ func (f *RegistryFeature) apply(opt registryOpt) {
 
 func Registry(opts ...registryOpt) RegistryFeature {
 	f := RegistryFeature{
-		enabled: true,
+		enabled:      true,
 		registryPath: &registryPathFlag,
 	}
 
@@ -50,4 +50,3 @@ func Registry(opts ...registryOpt) RegistryFeature {
 
 	return f
 }
-

@@ -59,7 +59,7 @@ type TemplatedNotificationDto struct {
 type PlainNotificationDto struct {
 	Metadata NotificationMetadata `json:"metadata"`
 
-	Subject     string               `json:"subject"`
-	Body        string               `json:"body"`
+	Subject     string      `json:"subject"`
+	Body        string      `json:"body"`
 	ContactInfo ContactInfo `json:"contact_info"`
 }

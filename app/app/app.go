@@ -5,7 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"github.com/gin-contrib/cors"
 	"github.com/ooqls/getset/log"
@@ -94,6 +97,20 @@ func (a *app) SetHealthCheck(f func() bool) *app {
 
 func (a *app) Run(ctx context.Context) error {
 	flag.Parse()
+
+	ctx, cancel := context.WithCancel(ctx)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	errChan := make(chan error, 1)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-signalChan
+		cancel()
+	}()
+
 	if a.testEnvironment != nil {
 		cleanup, err := a.testEnvironment.Start(context.Background())
 		if err != nil {
@@ -102,11 +119,21 @@ func (a *app) Run(ctx context.Context) error {
 		defer cleanup()
 	}
 
-	if err := a._startup(ctx); err != nil {
-		return err
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(errChan)
+		defer close(signalChan)
+		if err := a._startup(ctx); err != nil {
+			a.l.Error("failed to startup app", zap.Error(err))
+			errChan <- err
+		}
+	}()
 
-	return nil
+	err := <-errChan
+	wg.Wait()
+
+	return err
 }
 
 func (a *app) Features() *Features {

@@ -5,9 +5,9 @@ var docsPathFlag string
 var docsApiPathFlag string
 
 const (
-	docs_pathOpt string = "opt-docs-path"
+	docs_pathOpt     string = "opt-docs-path"
 	docs_api_pathOpt string = "opt-docs-api-path"
-	docs_portOpt string = "opt-docs-port"
+	docs_portOpt     string = "opt-docs-port"
 )
 
 type docsOpt struct {
@@ -27,10 +27,10 @@ func WithDocsPort(port int) docsOpt {
 }
 
 type DocsFeature struct {
-	Enabled bool
-	DocsPath string
+	Enabled     bool
+	DocsPath    string
 	DocsApiPath string
-    DocsPort int
+	DocsPort    int
 }
 
 func (f *DocsFeature) apply(opt docsOpt) {
@@ -44,15 +44,14 @@ func (f *DocsFeature) apply(opt docsOpt) {
 	}
 }
 
-
 func Docs(opts ...docsOpt) DocsFeature {
 	f := DocsFeature{
-		Enabled: true,
-		DocsPath: docsPathFlag,
+		Enabled:     true,
+		DocsPath:    docsPathFlag,
 		DocsApiPath: docsApiPathFlag,
-		DocsPort: docsPortFlag,
+		DocsPort:    docsPortFlag,
 	}
-	
+
 	for _, opt := range opts {
 		f.apply(opt)
 	}

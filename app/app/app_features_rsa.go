@@ -3,7 +3,6 @@ package app
 var rsaPrivKeyPathFlag string
 var rsaPubKeyPathFlag string
 
-
 const (
 	rsa_privateKeyPathOpt string = "opt-private-key-path"
 	rsa_publicKeyPathOpt  string = "opt-public-key-path"

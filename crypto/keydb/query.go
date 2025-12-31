@@ -23,4 +23,3 @@ func WithKeyType(key string) Query {
 		val: key,
 	}
 }
-

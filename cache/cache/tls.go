@@ -7,9 +7,9 @@ import (
 )
 
 type TLS struct {
-	KeyPath string
+	KeyPath  string
 	CertPath string
-	CaPath string
+	CaPath   string
 }
 
 func (t *TLS) GetTLSConfig() (*tls.Config, error) {
@@ -34,6 +34,6 @@ func (t *TLS) GetTLSConfig() (*tls.Config, error) {
 
 	return &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		RootCAs: caCert,
+		RootCAs:      caCert,
 	}, nil
 }
