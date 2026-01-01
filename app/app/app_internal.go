@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ooqls/getset/cache/factory"
 	"github.com/ooqls/getset/crypto/jwt"
 	"github.com/ooqls/getset/crypto/keys"
 	"github.com/ooqls/getset/db/redis"
@@ -172,6 +173,25 @@ func (a *App) _startup_logging_api(ctx *AppContext) error {
 	}
 	l.Debug("[Startup Logging API] finished adding logging routes")
 	a.state.LoggingAPIInitialized = true
+	return nil
+}
+
+func (a *App) _startup_cache(ctx *AppContext) error {
+	l := ctx.L()
+
+	l.Debug("[Startup Cache] initializing cache")
+	var cFactory factory.CacheFactory
+	switch a.features.Cache.CacheType {
+	case cacheTypeMem:
+		cFactory = factory.NewMemCacheFactory()
+	case cacheTypeRedis:
+		cFactory = factory.NewRedisCacheFactory(*redis.GetConnection(ctx))
+	case cacheTypeValkey:
+		cFactory = factory.NewValkeyCacheFactory(valkey.GetConnection(ctx))
+	}
+	ctx = ctx.WithCacheFactory(cFactory)
+	a.state.CacheInitialized = true
+	l.Debug("[Startup Cache] cache initialized successfully")
 	return nil
 }
 
@@ -543,6 +563,16 @@ func (a *App) _startup(ctx context.Context) error {
 		startup_funcs = append(startup_funcs, a._startup_redis)
 	}
 
+	if a.features.Valkey.Enabled {
+		l.Info("[Startup] Valkey enabled")
+		startup_funcs = append(startup_funcs, a._startup_valkey)
+	}
+
+	if a.features.Cache.Enabled {
+		l.Info("[Startup] Cache enabled")
+		startup_funcs = append(startup_funcs, a._startup_cache)
+	}
+
 	if a.features.Docs.Enabled {
 		l.Info("[Startup] Docs enabled")
 		startup_funcs = append(startup_funcs, a._startup_docs)
@@ -561,11 +591,6 @@ func (a *App) _startup(ctx context.Context) error {
 	if a.features.Health.Enabled {
 		l.Info("[Startup] Health enabled")
 		startup_funcs = append(startup_funcs, a._startup_health)
-	}
-
-	if a.features.Valkey.Enabled {
-		l.Info("[Startup] Valkey enabled")
-		startup_funcs = append(startup_funcs, a._startup_valkey)
 	}
 
 	appCtx := NewAppContext(ctx, a.l)

@@ -109,6 +109,11 @@ type HTTPConfig struct {
 	Port    int  `yaml:"port"`
 }
 
+type CacheConfig struct {
+	Enabled   bool   `yaml:"enabled"`
+	CacheType string `yaml:"cache_type"`
+}
+
 type RSAConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	PrivateKeyPath string `yaml:"private_key_path"`
@@ -127,6 +132,7 @@ type AppConfig struct {
 	Health       HealthConfig     `yaml:"health"`
 	HTTP         HTTPConfig       `yaml:"http"`
 	RSA          RSAConfig        `yaml:"rsa"`
+	Cache        CacheConfig      `yaml:"cache"`
 }
 
 func LoadConfig(path string) (*AppConfig, error) {

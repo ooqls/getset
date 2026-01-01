@@ -5,6 +5,7 @@ type AppState struct {
 	JWTInitialized        bool
 	RSAInitialized        bool
 	LoggingAPIInitialized bool
+	CacheInitialized      bool
 	HTTPInitialized       bool
 	GinInitialized        bool
 	DocsInitialized       bool

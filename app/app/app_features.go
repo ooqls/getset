@@ -28,6 +28,10 @@ func WithConfig(cfg *AppConfig) Features {
 			Engine:  gin.New(),
 			Cors:    cfg.Gin.Cors.CorsConfig(),
 		},
+		Cache: CacheFeature{
+			Enabled:   cfg.Cache.Enabled,
+			CacheType: cacheType(cfg.Cache.CacheType),
+		},
 		Docs: DocsFeature{
 			Enabled:     cfg.DocsConfig.Enabled,
 			DocsPath:    cfg.DocsConfig.DocsDir,
@@ -74,6 +78,7 @@ func WithConfig(cfg *AppConfig) Features {
 
 type Features struct {
 	LoggingAPI LoggingApiFeature
+	Cache      CacheFeature
 	RSA        RSAFeature
 	JWT        JWTFeature
 	SQL        SQLFeature
