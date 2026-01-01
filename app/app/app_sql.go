@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (a *app) _seed_pgx_files(ctx *AppContext, files []string) bool {
+func (a *App) _seed_pgx_files(ctx *AppContext, files []string) bool {
 	l := ctx.L()
 	sqlSeeded := len(files) > 0
 
@@ -25,7 +25,7 @@ func (a *app) _seed_pgx_files(ctx *AppContext, files []string) bool {
 	return sqlSeeded
 }
 
-func (a *app) _seed_sqlx_files(ctx *AppContext, files []string) bool {
+func (a *App) _seed_sqlx_files(ctx *AppContext, files []string) bool {
 	l := ctx.L()
 	c := gosqlx.GetSQLX()
 	sqlSeeded := len(files) > 0
@@ -40,7 +40,7 @@ func (a *app) _seed_sqlx_files(ctx *AppContext, files []string) bool {
 	return sqlSeeded
 }
 
-func (a *app) _startup_sql(ctx *AppContext) error {
+func (a *App) _startup_sql(ctx *AppContext) error {
 	l := ctx.L()
 	sqlFiles := []string{}
 

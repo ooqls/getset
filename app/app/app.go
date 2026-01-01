@@ -31,8 +31,8 @@ func init() {
 	flag.StringVar(&docsApiPathFlag, "docs-api-path", "/api/docs", "Path to the docs API")
 }
 
-func New(appName string, features Features) *app {
-	return &app{
+func New(appName string, features Features) *App {
+	return &App{
 		appName:    appName,
 		l:          log.NewLogger(appName),
 		features:   features,
@@ -41,7 +41,7 @@ func New(appName string, features Features) *app {
 	}
 }
 
-type app struct {
+type App struct {
 	appName         string
 	setup           func(ctx *AppContext) error
 	running         func(ctx *AppContext) error
@@ -57,15 +57,15 @@ type app struct {
 	threadWg        *sync.WaitGroup
 }
 
-func (a *app) WithTestEnvironment(env TestEnvironment) {
+func (a *App) WithTestEnvironment(env TestEnvironment) {
 	a.testEnvironment = &env
 }
 
-func (a *app) IsRunning() bool {
+func (a *App) IsRunning() bool {
 	return a.state.Running
 }
 
-func (a *app) OnStartup(f func(ctx *AppContext) error) *app {
+func (a *App) OnStartup(f func(ctx *AppContext) error) *App {
 	a.setup = func(ctx *AppContext) error {
 		if a.features.Gin.Enabled {
 			a.features.Gin.Engine.Use(cors.New(*a.features.Gin.Cors))
@@ -76,26 +76,26 @@ func (a *app) OnStartup(f func(ctx *AppContext) error) *app {
 	return a
 }
 
-func (a *app) OnRunning(f func(ctx *AppContext) error) *app {
+func (a *App) OnRunning(f func(ctx *AppContext) error) *App {
 	a.running = f
 	return a
 }
 
-func (a *app) OnStopped(f func(ctx *AppContext) error) *app {
+func (a *App) OnStopped(f func(ctx *AppContext) error) *App {
 	a.stopped = f
 	return a
 }
 
-func (a *app) IsHealthy() bool {
+func (a *App) IsHealthy() bool {
 	return a.state.Healthy
 }
 
-func (a *app) SetHealthCheck(f func() bool) *app {
+func (a *App) SetHealthCheck(f func() bool) *App {
 	a.healthCheck = f
 	return a
 }
 
-func (a *app) Run(ctx context.Context) error {
+func (a *App) Run(ctx context.Context) error {
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -136,6 +136,6 @@ func (a *app) Run(ctx context.Context) error {
 	return err
 }
 
-func (a *app) Features() *Features {
+func (a *App) Features() *Features {
 	return &a.features
 }

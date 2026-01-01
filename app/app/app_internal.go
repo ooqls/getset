@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (a *app) _start_http_server(ctx *AppContext, handler http.Handler, port int, name string) error {
+func (a *App) _start_http_server(ctx *AppContext, handler http.Handler, port int, name string) error {
 	l := ctx.L()
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("0.0.0.0:%d", port),
@@ -61,7 +61,7 @@ func (a *app) _start_http_server(ctx *AppContext, handler http.Handler, port int
 	return nil
 }
 
-func (a *app) _startup_docs(ctx *AppContext) error {
+func (a *App) _startup_docs(ctx *AppContext) error {
 	l := ctx.L()
 	l.Info("[Startup docs] Serving htnl docs",
 		zap.String("path", a.features.Docs.DocsPath), zap.String("api_path", a.features.Docs.DocsApiPath))
@@ -78,7 +78,7 @@ func (a *app) _startup_docs(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_tls(ctx *AppContext) error {
+func (a *App) _startup_tls(ctx *AppContext) error {
 	f := a.features.TLS
 	l := ctx.L()
 	cfg := &tls.Config{}
@@ -160,7 +160,7 @@ func (a *app) _startup_tls(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_logging_api(ctx *AppContext) error {
+func (a *App) _startup_logging_api(ctx *AppContext) error {
 	l := ctx.L()
 
 	l.Debug("[Startup Logging API] adding logging routes")
@@ -175,7 +175,7 @@ func (a *app) _startup_logging_api(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_redis(ctx *AppContext) error {
+func (a *App) _startup_redis(ctx *AppContext) error {
 	l := ctx.L()
 
 	l.Debug("[Startup Redis] initializing Redis client")
@@ -191,7 +191,7 @@ func (a *app) _startup_redis(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_valkey(ctx *AppContext) error {
+func (a *App) _startup_valkey(ctx *AppContext) error {
 	l := ctx.L()
 
 	l.Debug("[Startup Valkey] initializing Valkey client")
@@ -206,7 +206,7 @@ func (a *app) _startup_valkey(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_rsa(ctx *AppContext) error {
+func (a *App) _startup_rsa(ctx *AppContext) error {
 	l := ctx.L()
 
 	privKeyPath := a.features.RSA.PrivateKeyPath
@@ -248,7 +248,7 @@ func (a *app) _startup_rsa(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_jwt(ctx *AppContext) error {
+func (a *App) _startup_jwt(ctx *AppContext) error {
 	l := ctx.L()
 
 	configs := a.features.JWT.tokenConfiguration
@@ -310,7 +310,7 @@ func (a *app) _startup_jwt(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup_registry(ctx *AppContext) error {
+func (a *App) _startup_registry(ctx *AppContext) error {
 	l := ctx.L()
 
 	if a.features.Registry.registryPath != nil && *a.features.Registry.registryPath != "" {
@@ -337,7 +337,7 @@ func (a *app) _startup_registry(ctx *AppContext) error {
 
 }
 
-func (a *app) _startup_health(ctx *AppContext) error {
+func (a *App) _startup_health(ctx *AppContext) error {
 	l := ctx.L()
 	l.Info("[Startup Health] initializing health with path", zap.String("path", a.features.Health.Path))
 	port := 8080
@@ -406,7 +406,7 @@ func (a *app) _startup_health(ctx *AppContext) error {
 
 }
 
-func (a *app) _run_gin(ctx *AppContext) error {
+func (a *App) _run_gin(ctx *AppContext) error {
 	l := a.l
 	server := &http.Server{
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.features.Gin.Port),
@@ -455,7 +455,7 @@ func (a *app) _run_gin(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _run_http(ctx *AppContext) error {
+func (a *App) _run_http(ctx *AppContext) error {
 	l := a.l
 	err := a._start_http_server(ctx, a.features.HTTP.Mux, a.features.HTTP.Port, "http")
 	if err != nil {
@@ -467,7 +467,7 @@ func (a *app) _run_http(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _run(ctx *AppContext) error {
+func (a *App) _run(ctx *AppContext) error {
 	l := a.l
 
 	if a.features.Gin.Enabled {
@@ -505,7 +505,7 @@ func (a *app) _run(ctx *AppContext) error {
 	return nil
 }
 
-func (a *app) _startup(ctx context.Context) error {
+func (a *App) _startup(ctx context.Context) error {
 	l := a.l
 	if a.onPanic != nil {
 		defer func() {
