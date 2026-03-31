@@ -5,6 +5,7 @@ import (
 
 	"github.com/ooqls/getset/cache/factory"
 	"github.com/ooqls/getset/crypto/jwt"
+	"github.com/ooqls/getset/email"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +27,7 @@ type AppContext struct {
 	l                    *zap.Logger
 	issuerToTokenConfigs map[string]jwt.TokenConfiguration
 	cacheFactory         factory.CacheFactory
+	emailClient          email.EmailClient
 }
 
 func (ctx *AppContext) L() *zap.Logger {
@@ -44,6 +46,10 @@ func (ctx *AppContext) RefreshIssuerConfig() (*jwt.TokenConfiguration, bool) {
 
 func (ctx *AppContext) CacheFactory() (factory.CacheFactory, bool) {
 	return ctx.cacheFactory, ctx.cacheFactory != nil
+}
+
+func (ctx *AppContext) EmailClient() (email.EmailClient, bool) {
+	return ctx.emailClient, ctx.emailClient != nil
 }
 
 func (ctx *AppContext) WithCacheFactory(factory factory.CacheFactory) *AppContext {

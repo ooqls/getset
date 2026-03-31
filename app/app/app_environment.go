@@ -11,9 +11,10 @@ import (
 )
 
 type TestEnvironment struct {
-	Postgres bool
-	Redis    bool
-	Valkey   bool
+	Postgres      bool
+	Redis         bool
+	Valkey        bool
+	Elasticsearch bool
 }
 
 func (e *TestEnvironment) Start(ctx context.Context) (func(), error) {
@@ -32,6 +33,11 @@ func (e *TestEnvironment) Start(ctx context.Context) (func(), error) {
 	if e.Valkey {
 		valkeyCont := containers.StartValkey(ctx)
 		conts = append(conts, valkeyCont)
+	}
+
+	if e.Elasticsearch {
+		elasticsearch := containers.StartElasticsearch(ctx)
+		conts = append(conts, elasticsearch)
 	}
 
 	return func() {
