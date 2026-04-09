@@ -19,6 +19,7 @@ const (
 	sql_createIndexStatementsOpt string = "opt-create-index"
 	sql_DirsOpt                  string = "opt-sql-dirs"
 	sql_sqlFilesOpt              string = "opt-sql-files"
+	sql_passwordFileOpt          string = "opt-sql-password-file"
 )
 
 type sqlOpt struct {
@@ -61,6 +62,15 @@ func WithSQLDirs(dirs []string) sqlOpt {
 	}
 }
 
+func WithSQLPasswordFile(path string) sqlOpt {
+	return sqlOpt{
+		featureOpt: featureOpt{
+			key:   sql_passwordFileOpt,
+			value: path,
+		},
+	}
+}
+
 func SQLX(opts ...sqlOpt) SQLFeature {
 	return newSQLFeature(SQLXPackage, opts...)
 }
@@ -90,6 +100,7 @@ type SQLFeature struct {
 	SQLFiles              []string
 	SQLDirs               []string
 	SQLPackage            sqlPackage
+	PasswordFile          string
 }
 
 func (f *SQLFeature) apply(opt sqlOpt) {
@@ -102,5 +113,7 @@ func (f *SQLFeature) apply(opt sqlOpt) {
 		f.SQLFiles = opt.featureOpt.value.([]string)
 	case sql_DirsOpt:
 		f.SQLDirs = opt.featureOpt.value.([]string)
+	case sql_passwordFileOpt:
+		f.PasswordFile = opt.featureOpt.value.(string)
 	}
 }

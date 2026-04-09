@@ -23,6 +23,15 @@ type EncryptedData []byte
 
 type DecryptedData []byte
 
+type AlgorithmType string
+
+const (
+	None   AlgorithmType = "none"
+	Base64 AlgorithmType = "base64"
+	RSA    AlgorithmType = "rsa"
+	AESGCM AlgorithmType = "aes-gcm"
+)
+
 type Algorithm interface {
 	Encrypt(data []byte) (EncryptedData, error)
 	Decrypt(data EncryptedData) (DecryptedData, error)
@@ -33,6 +42,7 @@ type GenericAlgorithm struct {
 	EncryptFunc func(data []byte) ([]byte, error)
 	DecryptFunc func(data []byte) ([]byte, error)
 	KeyFunc     func() ([]byte, error)
+	GetTypeFunc func() AlgorithmType
 }
 
 func (g *GenericAlgorithm) Encrypt(data []byte) (EncryptedData, error) {
@@ -45,6 +55,14 @@ func (g *GenericAlgorithm) Decrypt(data EncryptedData) (DecryptedData, error) {
 
 func (g *GenericAlgorithm) GetKey() ([]byte, error) {
 	return g.KeyFunc()
+}
+
+func NewNoopAlgorithm() Algorithm {
+	return &GenericAlgorithm{
+		EncryptFunc: func(data []byte) ([]byte, error) { return data, nil },
+		DecryptFunc: func(data []byte) ([]byte, error) { return data, nil },
+		GetTypeFunc: func() AlgorithmType { return None },
+	}
 }
 
 func NewBase64Algorithm() Algorithm {
@@ -63,6 +81,7 @@ func NewDefaultAlgorithm() Algorithm {
 		DecryptFunc: func(data []byte) ([]byte, error) {
 			return DecryptedData(data), nil
 		},
+		GetTypeFunc: func() AlgorithmType { return Base64 },
 	}
 }
 
@@ -77,6 +96,20 @@ func Decrypt(data []byte) ([]byte, error) {
 	return DecryptedData(dec), err
 }
 
+func NewRSAAlgorithmWithKey(key keys.RSAKey) Algorithm {
+	return &GenericAlgorithm{
+		EncryptFunc: func(data []byte) ([]byte, error) {
+			return key.Encrypt(data)
+		},
+		DecryptFunc: RSADecrypt,
+		KeyFunc: func() ([]byte, error) {
+			_, b := key.PrivateKey()
+			return b, nil
+		},
+		GetTypeFunc: func() AlgorithmType { return RSA },
+	}
+}
+
 func NewRsaAlgorithm() Algorithm {
 	return &GenericAlgorithm{
 		EncryptFunc: RSAEncrypt,
@@ -86,6 +119,7 @@ func NewRsaAlgorithm() Algorithm {
 			_, keyBytes := key.PrivateKey()
 			return keyBytes, nil
 		},
+		GetTypeFunc: func() AlgorithmType { return RSA },
 	}
 }
 
@@ -129,6 +163,7 @@ func NewAESGCMAlgorithmWithKey(key []byte, salt [SALT_SIZE]byte) Algorithm {
 		DecryptFunc: func(data []byte) ([]byte, error) {
 			return AESGCMDecryptWithKey(key, data)
 		},
+		GetTypeFunc: func() AlgorithmType { return AESGCM },
 	}
 }
 
@@ -186,6 +221,22 @@ func AESGCMEncryptWithKey(key []byte, salt [SALT_SIZE]byte, data []byte) ([]byte
 
 	encrypted := gcm.Seal(nil, iv[:], data, nil)
 	return EncodeAESGCM(salt, [IV_SIZE]byte(iv), encrypted)
+}
+
+func NewX509Algorithm(x509 *keys.X509) Algorithm {
+	return &GenericAlgorithm{
+		EncryptFunc: func(data []byte) ([]byte, error) {
+			return x509.Encrypt(data)
+		},
+		DecryptFunc: func(data []byte) ([]byte, error) {
+			return x509.Decrypt(data)
+		},
+		KeyFunc: func() ([]byte, error) {
+			_, b := x509.PrivateKey()
+			return b, nil
+		},
+		GetTypeFunc: func() AlgorithmType { return "x509" },
+	}
 }
 
 func AESGCMDecryptWithKey(key, data []byte) ([]byte, error) {

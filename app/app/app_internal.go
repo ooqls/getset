@@ -64,15 +64,33 @@ func (a *App) _start_http_server(ctx *AppContext, handler http.Handler, port int
 
 func (a *App) _startup_docs(ctx *AppContext) error {
 	l := ctx.L()
-	l.Info("[Startup docs] Serving htnl docs",
+	l.Info("[Startup docs] Serving docs",
 		zap.String("path", a.features.Docs.DocsPath), zap.String("api_path", a.features.Docs.DocsApiPath))
-	if a.Features().HTTP.Enabled {
-		docsFs := http.FS(os.DirFS(a.features.Docs.DocsPath))
-		a.Features().HTTP.Mux.Handle(a.features.Docs.DocsApiPath, http.FileServer(docsFs))
-	}
 
-	if a.Features().Gin.Enabled {
-		a.Features().Gin.Engine.StaticFS(a.features.Docs.DocsApiPath, http.FS(os.DirFS(a.features.Docs.DocsPath)))
+	content := a.features.Docs.DocsContent
+	apiPath := a.features.Docs.DocsApiPath
+
+	if content != "" {
+		if a.Features().HTTP.Enabled {
+			a.Features().HTTP.Mux.HandleFunc(apiPath, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(content))
+			})
+		}
+		if a.Features().Gin.Enabled {
+			a.Features().Gin.Engine.GET(apiPath, func(c *gin.Context) {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(content))
+			})
+		}
+	} else if a.features.Docs.DocsPath != "" {
+		if a.Features().HTTP.Enabled {
+			docsFs := http.FS(os.DirFS(a.features.Docs.DocsPath))
+			a.Features().HTTP.Mux.Handle(apiPath, http.FileServer(docsFs))
+		}
+		if a.Features().Gin.Enabled {
+			a.Features().Gin.Engine.StaticFS(apiPath, http.FS(os.DirFS(a.features.Docs.DocsPath)))
+		}
 	}
 
 	a.state.DocsInitialized = true

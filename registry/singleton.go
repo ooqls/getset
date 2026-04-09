@@ -60,7 +60,6 @@ func InitLocalhost() {
 				Auth: Auth{
 					Enabled:  true,
 					Username: "postgres",
-					Password: "postgres",
 				},
 			},
 			Database: "postgres",
@@ -72,7 +71,6 @@ func InitLocalhost() {
 				Auth: Auth{
 					Enabled:  true,
 					Username: "elastic",
-					Password: "elastic",
 				},
 			},
 		},

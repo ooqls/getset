@@ -1,4 +1,4 @@
-package eventsv1
+package events
 
 import "github.com/ooqls/getset/eventsource/eventsourcingv1"
 

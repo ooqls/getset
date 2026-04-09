@@ -34,12 +34,17 @@ func GetRegistryOptions() Options {
 			panic(err)
 		}
 	}
+	pw, err := reg.Postgres.Server.ResolvePassword()
+	if err != nil {
+		l.Error("failed to resolve postgres password", zap.Error(err))
+		panic(err)
+	}
 
 	return Options{
 		Host: reg.Postgres.Host,
 		Port: reg.Postgres.Port,
 		User: reg.Postgres.Auth.Username,
-		Pw:   reg.Postgres.Auth.Password,
+		Pw:   pw,
 		DB:   dbName,
 		Tls:  tlsCfg,
 	}

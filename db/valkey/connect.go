@@ -58,8 +58,12 @@ func initValkey(db *registry.Database) error {
 	}
 
 	if db.Auth.Enabled {
+		pw, err := db.Server.ResolvePassword()
+		if err != nil {
+			return fmt.Errorf("failed to resolve valkey password: %v", err)
+		}
 		cliOpts.Username = db.Auth.Username
-		cliOpts.Password = db.Auth.Password
+		cliOpts.Password = pw
 	}
 
 	var err error

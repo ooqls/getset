@@ -9,7 +9,7 @@ import (
 	"github.com/ooqls/getset/db/containers"
 	"github.com/ooqls/getset/db/sqlx"
 	"github.com/ooqls/getset/eventsource/eventsourcingv1"
-	"github.com/ooqls/getset/eventsource/eventsourcingv1/tablesv1"
+	"github.com/ooqls/getset/eventsource/eventsourcingv1/tables"
 )
 
 type TestEntity struct {
@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 	defer cancel()
 	cont := containers.StartPostgres(ctx)
 
-	sqlx.SeedSQLX((tablesv1.GetCreateTableStmts(eventsourcingv1.EventSource("test"))), []string{})
+	sqlx.SeedSQLX((tables.GetCreateTableStmts(eventsourcingv1.EventSource("test"))), []string{})
 
 	timeout := time.Second * 30
 	defer cont.Stop(ctx, &timeout)

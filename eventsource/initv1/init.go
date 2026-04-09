@@ -5,7 +5,7 @@ import (
 
 	"github.com/ooqls/getset/db/sqlx"
 	"github.com/ooqls/getset/eventsource/eventsourcingv1"
-	"github.com/ooqls/getset/eventsource/eventsourcingv1/tablesv1"
+	"github.com/ooqls/getset/eventsource/eventsourcingv1/tables"
 	"github.com/ooqls/getset/log"
 	"go.uber.org/zap"
 )
@@ -18,7 +18,7 @@ func Init(ctx context.Context, sources ...eventsourcingv1.EventSource) {
 	}
 
 	l.Info("Seeding database with entity tables")
-	sqlx.SeedSQLX(tablesv1.GetCreateTableStmts(sources...), []string{})
+	sqlx.SeedSQLX(tables.GetCreateTableStmts(sources...), []string{})
 
 	for _, source := range sources {
 		l.Info("Initialized entity",

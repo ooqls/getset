@@ -14,6 +14,7 @@ type DocsConfig struct {
 	DocsApiPath string `yaml:"docs_api_path"`
 	DocsDir     string `yaml:"docs_dir"`
 	DocsPort    int    `yaml:"docs_port"`
+	DocsContent string `yaml:"docs_content"`
 }
 
 type ServerConfig struct {

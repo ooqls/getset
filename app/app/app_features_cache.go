@@ -20,6 +20,18 @@ func WithCacheType(cacheType string) cacheOpt {
 	return cacheOpt{featureOpt: featureOpt{key: cache_typeOpt, value: cacheType}}
 }
 
+func WithRedis() cacheOpt {
+	return cacheOpt{featureOpt: featureOpt{key: cache_typeOpt, value: cacheTypeRedis}}
+}
+
+func WithValkey() cacheOpt {
+	return cacheOpt{featureOpt: featureOpt{key: cache_typeOpt, value: cacheTypeValkey}}
+}
+
+func WithMem() cacheOpt {
+	return cacheOpt{featureOpt: featureOpt{key: cache_typeOpt, value: cacheTypeMem}}
+}
+
 type CacheFeature struct {
 	Enabled   bool
 	CacheType cacheType

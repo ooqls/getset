@@ -11,11 +11,11 @@ type redisOpt struct {
 }
 
 const (
-	redis_addressOpt  string = "opt-redis-address"
-	redis_portOpt     string = "opt-redis-port"
-	redis_dbOpt       string = "opt-redis-db"
-	redis_userOpt     string = "opt-redis-user"
-	redis_passwordOpt string = "opt-redis-password"
+	redis_addressOpt      string = "opt-redis-address"
+	redis_portOpt         string = "opt-redis-port"
+	redis_dbOpt           string = "opt-redis-db"
+	redis_userOpt         string = "opt-redis-user"
+	redis_passwordFileOpt string = "opt-redis-password-file"
 )
 
 func WithRedisAddress(address string) redisOpt {
@@ -34,8 +34,8 @@ func WithUsername(username string) redisOpt {
 	return redisOpt{featureOpt: featureOpt{key: redis_userOpt, value: username}}
 }
 
-func WithPassword(password string) redisOpt {
-	return redisOpt{featureOpt: featureOpt{key: redis_passwordOpt, value: password}}
+func WithRedisPasswordFile(path string) redisOpt {
+	return redisOpt{featureOpt: featureOpt{key: redis_passwordFileOpt, value: path}}
 }
 
 type RedisFeature struct {
@@ -53,9 +53,8 @@ func (f *RedisFeature) apply(opt redisOpt) {
 		f.redisDB.Database = fmt.Sprintf("%d", opt.value.(int))
 	case redis_userOpt:
 		f.redisDB.Auth.Username = opt.value.(string)
-	case redis_passwordOpt:
-		f.redisDB.Auth.Password = opt.value.(string)
-
+	case redis_passwordFileOpt:
+		f.redisDB.Auth.PasswordFile = opt.value.(string)
 	}
 }
 

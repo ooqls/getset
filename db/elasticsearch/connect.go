@@ -21,6 +21,7 @@ var esClient *elasticsearch.TypedClient
 var m sync.Mutex
 
 type ElasticsearchOptions struct {
+	Protocol  string
 	Host      string
 	Port      int
 	User      string
@@ -38,9 +39,10 @@ func Init(opts ElasticsearchOptions) error {
 	// headers.Del("Accept")
 	// headers.Set("Accept", "application/json")
 	// headers.Set("Content-Type", "application/json")
+
 	esClient, err = elasticsearch.NewTypedClient(elasticsearch.Config{
 		Addresses: []string{
-			fmt.Sprintf("https://%s:%d", opts.Host, opts.Port),
+			fmt.Sprintf("%s://%s:%d", opts.Protocol, opts.Host, opts.Port),
 		},
 		Username:          opts.User,
 		Password:          opts.Pw,
@@ -96,11 +98,17 @@ func InitDefault() error {
 		return fmt.Errorf("failed to get TLS config: %s", err)
 	}
 
+	pw, err := reg.Elasticsearch.Server.ResolvePassword()
+	if err != nil {
+		return fmt.Errorf("failed to resolve elasticsearch password: %v", err)
+	}
+
 	opts := ElasticsearchOptions{
+		Protocol:  reg.Elasticsearch.Protocol,
 		Host:      reg.Elasticsearch.Host,
 		Port:      reg.Elasticsearch.Port,
 		User:      reg.Elasticsearch.Auth.Username,
-		Pw:        reg.Elasticsearch.Auth.Password,
+		Pw:        pw,
 		DB:        reg.Elasticsearch.Database,
 		TlsConfig: tlsConfig,
 	}

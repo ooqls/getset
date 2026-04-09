@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ooqls/getset/db/containers"
-	"github.com/ooqls/getset/registry"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,23 +20,25 @@ func TestConnect(t *testing.T) {
 	}
 	t.Logf("Elasticsearch should be running at localhost:%s", port)
 
-	registry.Set(registry.Registry{
-		Elasticsearch: &registry.Database{
-			Database: "elasticsearch",
-			Server: registry.Server{
-				Host: "localhost",
-				Port: port.Int(),
-				Auth: registry.Auth{
-					Username: "elastic",
-					Password: "changeme",
-				},
-				TLS: &registry.TLSConfig{
-					Enabled:               true,
-					InsecureSkipTLSVerify: true,
-				},
-			},
-		},
-	})
+	// esAuth, err := registry.NewAuthWithPassword("elastic", "changeme")
+	// if err != nil {
+	// 	t.Fatalf("failed to create elasticsearch auth: %v", err)
+	// }
+	// registry.Set(registry.Registry{
+	// 	Elasticsearch: &registry.Database{
+	// 		Database: "elasticsearch",
+	// 		Server: registry.Server{
+	// 			Host:     "localhost",
+	// 			Protocol: "http",
+	// 			Port:     port.Int(),
+	// 			Auth:     esAuth,
+	// 			TLS: &registry.TLSConfig{
+	// 				Enabled:               true,
+	// 				InsecureSkipTLSVerify: true,
+	// 			},
+	// 		},
+	// 	},
+	// })
 
 	// Get the mapped port
 	err = InitDefault()

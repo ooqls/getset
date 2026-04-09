@@ -148,16 +148,16 @@ func StartRedis(ctx context.Context, opts ...Options) testcontainers.Container {
 	time.Sleep(3 * time.Second)
 	zap.L().Debug("redis should be running", zap.Int("port", port.Int()))
 
+	redisAuth, err := registry.NewAuthWithPassword("", "password")
+	if err != nil {
+		panic(fmt.Errorf("failed to create redis auth: %v", err))
+	}
 	reg.Redis = &registry.Database{
 		Database: "0",
 		Server: registry.Server{
 			Host: "localhost",
 			Port: port.Int(),
-
-			Auth: registry.Auth{
-				Enabled:  true,
-				Password: "password",
-			},
+			Auth: redisAuth,
 		},
 	}
 	registry.Set(reg)
@@ -196,16 +196,16 @@ func StartPostgres(ctx context.Context, opts ...Options) testcontainers.Containe
 	time.Sleep(3 * time.Second)
 	zap.L().Debug("postgres should be running", zap.Int("port", port.Int()))
 
+	pgAuth, err := registry.NewAuthWithPassword("user", "user100")
+	if err != nil {
+		panic(fmt.Errorf("failed to create postgres auth: %v", err))
+	}
 	reg.Postgres = &registry.Database{
 		Database: "test",
 		Server: registry.Server{
 			Host: "localhost",
 			Port: port.Int(),
-			Auth: registry.Auth{
-				Enabled:  true,
-				Username: "user",
-				Password: "user100",
-			},
+			Auth: pgAuth,
 		},
 	}
 	registry.Set(reg)
@@ -251,16 +251,17 @@ func StartElasticsearch(ctx context.Context, opts ...Options) testcontainers.Con
 	time.Sleep(3 * time.Second)
 	zap.L().Debug("elasticsearch should be running", zap.Int("port", port.Int()))
 
+	esAuth, err := registry.NewAuthWithPassword("elastic", "changeme")
+	if err != nil {
+		panic(fmt.Errorf("failed to create elasticsearch auth: %v", err))
+	}
 	reg.Elasticsearch = &registry.Database{
 		Database: "elasticsearch",
 		Server: registry.Server{
-			Host: "localhost",
-			Port: port.Int(),
-			Auth: registry.Auth{
-				Enabled:  true,
-				Password: "changeme",
-				Username: "elastic",
-			},
+			Protocol: "https",
+			Host:     "localhost",
+			Port:     port.Int(),
+			Auth:     esAuth,
 			TLS: &registry.TLSConfig{
 				Enabled:               true,
 				InsecureSkipTLSVerify: true,

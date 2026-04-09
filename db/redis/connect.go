@@ -45,9 +45,14 @@ func initRedis(db *registry.Database) error {
 		return fmt.Errorf("failed to convert database string to int: %v", err)
 	}
 
+	pw, err := db.Server.ResolvePassword()
+	if err != nil {
+		return fmt.Errorf("failed to resolve redis password: %v", err)
+	}
+
 	pool = redis.NewClient(&redis.Options{
 		Addr:      fmt.Sprintf("%s:%d", db.Host, db.Port),
-		Password:  db.Auth.Password,
+		Password:  pw,
 		Username:  db.Auth.Username,
 		DB:        redisDb,
 		TLSConfig: tlsCfg,

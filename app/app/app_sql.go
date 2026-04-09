@@ -1,11 +1,14 @@
 package app
 
 import (
+	"context"
+	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ooqls/getset/db/pgx"
+	"github.com/ooqls/getset/db/postgres"
 	gosqlx "github.com/ooqls/getset/db/sqlx"
 	"go.uber.org/zap"
 )
@@ -64,8 +67,25 @@ func (a *App) _startup_sql(ctx *AppContext) error {
 
 		l.Debug("[Startup SQL] initializing SQL files", zap.Strings("sql_files", sqlFiles))
 
+		var sqlOpts *postgres.Options
+		if a.features.SQL.PasswordFile != "" {
+			b, pwErr := os.ReadFile(a.features.SQL.PasswordFile)
+			if pwErr != nil {
+				l.Error("[Startup SQL] failed to read password file", zap.Error(pwErr))
+				return pwErr
+			}
+			opts := postgres.GetRegistryOptions()
+			opts.Pw = string(b)
+			sqlOpts = &opts
+		}
+
 		if a.features.SQL.SQLPackage == SQLXPackage {
-			err := gosqlx.InitDefault()
+			var err error
+			if sqlOpts != nil {
+				_, err = gosqlx.Init(*sqlOpts)
+			} else {
+				err = gosqlx.InitDefault()
+			}
 			if err != nil {
 				l.Error("[Startup SQL] failed to initialize SQLX", zap.Error(err))
 				return err
@@ -73,7 +93,12 @@ func (a *App) _startup_sql(ctx *AppContext) error {
 
 			a.state.SQLSeeded = a._seed_sqlx_files(ctx, sqlFiles)
 		} else if a.features.SQL.SQLPackage == PGXPackage {
-			err := pgx.InitDefault()
+			var err error
+			if sqlOpts != nil {
+				_, err = pgx.Init(context.Background(), *sqlOpts)
+			} else {
+				err = pgx.InitDefault()
+			}
 			if err != nil {
 				l.Error("[Startup SQL] failed to initialize PGX", zap.Error(err))
 				return err
