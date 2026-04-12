@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -505,6 +506,35 @@ func (a *App) _run_http(ctx *AppContext) error {
 	return nil
 }
 
+func (a *App) _run_grpc(ctx *AppContext) error {
+	l := a.l
+	srv := a.features.Grpc.Server
+
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.features.Grpc.Port))
+	if err != nil {
+		l.Error("[Running gRPC] failed to listen", zap.Int("port", a.features.Grpc.Port), zap.Error(err))
+		return fmt.Errorf("failed to listen on grpc port %d: %v", a.features.Grpc.Port, err)
+	}
+
+	a.threadWg.Add(2)
+	go func() {
+		defer a.threadWg.Done()
+		l.Debug("[Running gRPC] starting server", zap.Int("port", a.features.Grpc.Port))
+		if err := srv.Serve(lis); err != nil {
+			l.Error("[Running gRPC] server error", zap.Error(err))
+		}
+	}()
+	go func() {
+		defer a.threadWg.Done()
+		<-ctx.Done()
+		l.Debug("[Running gRPC] stopping server")
+		srv.GracefulStop()
+	}()
+
+	a.state.GrpcInitialized = true
+	return nil
+}
+
 func (a *App) _run(ctx *AppContext) error {
 	l := a.l
 
@@ -523,6 +553,15 @@ func (a *App) _run(ctx *AppContext) error {
 			return err
 		}
 	}
+
+	if a.features.Grpc.Enabled {
+		err := a._run_grpc(ctx)
+		if err != nil {
+			a.l.Error("[Running gRPC] encountered an error when running grpc", zap.Error(err))
+			return err
+		}
+	}
+
 	a.state.Running = true
 	a.state.Healthy = true
 

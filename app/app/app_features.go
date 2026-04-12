@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 )
 
 type featureOpt struct {
@@ -74,6 +75,11 @@ func WithConfig(cfg *AppConfig) Features {
 			enabled:      cfg.Registry.Enabled,
 			registryPath: &cfg.Registry.Path,
 		},
+		Grpc: GrpcFeature{
+			Enabled: cfg.Grpc.Enabled,
+			Port:    cfg.Grpc.Port,
+			Server:  grpc.NewServer(),
+		},
 	}
 }
 
@@ -91,4 +97,5 @@ type Features struct {
 	Docs       DocsFeature
 	Health     HealthFeature
 	Gin        GinFeature
+	Grpc       GrpcFeature
 }

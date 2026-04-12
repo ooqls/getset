@@ -8,6 +8,7 @@ type AppState struct {
 	CacheInitialized      bool
 	HTTPInitialized       bool
 	GinInitialized        bool
+	GrpcInitialized       bool
 	DocsInitialized       bool
 	TLSInitialized        bool
 	SQLInitialized        bool

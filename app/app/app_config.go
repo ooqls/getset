@@ -115,6 +115,11 @@ type CacheConfig struct {
 	CacheType string `yaml:"cache_type"`
 }
 
+type GrpcConfig struct {
+	Enabled bool `yaml:"enabled"`
+	Port    int  `yaml:"port"`
+}
+
 type RSAConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	PrivateKeyPath string `yaml:"private_key_path"`
@@ -134,6 +139,7 @@ type AppConfig struct {
 	HTTP         HTTPConfig       `yaml:"http"`
 	RSA          RSAConfig        `yaml:"rsa"`
 	Cache        CacheConfig      `yaml:"cache"`
+	Grpc         GrpcConfig       `yaml:"grpc"`
 }
 
 func LoadConfig(path string) (*AppConfig, error) {
