@@ -120,6 +120,17 @@ type GrpcConfig struct {
 	Port    int  `yaml:"port"`
 }
 
+type SQLiteDBConfig struct {
+	Name   string   `yaml:"name"`
+	Path   string   `yaml:"path"`
+	Schema []string `yaml:"schema"`
+}
+
+type SQLiteConfig struct {
+	Enabled   bool             `yaml:"enabled"`
+	Databases []SQLiteDBConfig `yaml:"databases"`
+}
+
 type RSAConfig struct {
 	Enabled        bool   `yaml:"enabled"`
 	PrivateKeyPath string `yaml:"private_key_path"`
@@ -140,6 +151,7 @@ type AppConfig struct {
 	RSA          RSAConfig        `yaml:"rsa"`
 	Cache        CacheConfig      `yaml:"cache"`
 	Grpc         GrpcConfig       `yaml:"grpc"`
+	SQLite       SQLiteConfig     `yaml:"sqlite"`
 }
 
 func LoadConfig(path string) (*AppConfig, error) {

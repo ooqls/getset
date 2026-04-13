@@ -15,6 +15,7 @@ import (
 	"github.com/ooqls/getset/crypto/jwt"
 	"github.com/ooqls/getset/crypto/keys"
 	"github.com/ooqls/getset/db/redis"
+	dbsqlite "github.com/ooqls/getset/db/sqlite"
 	"github.com/ooqls/getset/db/valkey"
 	v1 "github.com/ooqls/getset/log/api/v1"
 	"github.com/ooqls/getset/registry"
@@ -506,6 +507,20 @@ func (a *App) _run_http(ctx *AppContext) error {
 	return nil
 }
 
+func (a *App) _startup_sqlite(ctx *AppContext) error {
+	l := ctx.L()
+	for _, db := range a.features.SQLite.Databases {
+		l.Debug("[Startup SQLite] opening database", zap.String("name", db.Name), zap.String("path", db.Path))
+		if err := dbsqlite.Init(db.Name, db.Path, db.Schema); err != nil {
+			l.Error("[Startup SQLite] failed to initialize database", zap.String("name", db.Name), zap.Error(err))
+			return err
+		}
+	}
+	a.state.SQLiteInitialized = true
+	l.Debug("[Startup SQLite] all databases initialized")
+	return nil
+}
+
 func (a *App) _run_grpc(ctx *AppContext) error {
 	l := a.l
 	srv := a.features.Grpc.Server
@@ -648,6 +663,11 @@ func (a *App) _startup(ctx context.Context) error {
 	if a.features.Health.Enabled {
 		l.Info("[Startup] Health enabled")
 		startup_funcs = append(startup_funcs, a._startup_health)
+	}
+
+	if a.features.SQLite.Enabled {
+		l.Info("[Startup] SQLite enabled")
+		startup_funcs = append(startup_funcs, a._startup_sqlite)
 	}
 
 	appCtx := NewAppContext(ctx, a.l)

@@ -80,6 +80,17 @@ func WithConfig(cfg *AppConfig) Features {
 			Port:    cfg.Grpc.Port,
 			Server:  grpc.NewServer(),
 		},
+		SQLite: func() SQLiteFeature {
+			f := SQLiteFeature{Enabled: cfg.SQLite.Enabled}
+			for _, db := range cfg.SQLite.Databases {
+				f.Databases = append(f.Databases, SQLiteDB{
+					Name:   db.Name,
+					Path:   db.Path,
+					Schema: db.Schema,
+				})
+			}
+			return f
+		}(),
 	}
 }
 
@@ -98,4 +109,5 @@ type Features struct {
 	Health     HealthFeature
 	Gin        GinFeature
 	Grpc       GrpcFeature
+	SQLite     SQLiteFeature
 }
