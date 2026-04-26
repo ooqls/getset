@@ -44,8 +44,13 @@ func (ctx *AppContext) RefreshIssuerConfig() (*jwt.TokenConfiguration, bool) {
 	return &config, ok
 }
 
-func (ctx *AppContext) CacheFactory() (factory.CacheFactory, bool) {
-	return ctx.cacheFactory, ctx.cacheFactory != nil
+func (ctx *AppContext) CacheFactory() factory.CacheFactory {
+	if ctx.cacheFactory == nil {
+		ctx.L().Warn("cache factory not set, using memory caching")
+		ctx.cacheFactory = factory.NewMemCacheFactory()
+	}
+
+	return ctx.cacheFactory
 }
 
 func (ctx *AppContext) EmailClient() (email.EmailClient, bool) {

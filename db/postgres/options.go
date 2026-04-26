@@ -18,7 +18,8 @@ type Options struct {
 }
 
 func (opt *Options) ConnectionString() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s", opt.User, opt.Pw, opt.Host, opt.Port, opt.DB)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", opt.User, opt.Pw, opt.Host, opt.Port, opt.DB)
+	return url
 }
 
 var dbName string = "postgres"

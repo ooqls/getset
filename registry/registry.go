@@ -204,7 +204,7 @@ type Registry struct {
 	Nats  *MessageBroker `yaml:"nats,omitempty"`
 
 	Redis         *Database `yaml:"redis,omitempty"`
-	Valkey        *Database `yaml:"valkeys,omitempty"`
+	Valkey        *Database `yaml:"valkey,omitempty"`
 	Postgres      *Database `yaml:"postgres,omitempty"`
 	Mongo         *Database `yaml:"mongo,omitempty"`
 	Neo4j         *Database `yaml:"neo4j,omitempty"`
