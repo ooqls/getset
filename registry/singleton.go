@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 
@@ -98,7 +97,7 @@ func InitDefault() error {
 }
 
 func Init(path string) error {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to init registry: %v", err)
 	}

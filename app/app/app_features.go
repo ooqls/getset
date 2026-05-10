@@ -100,8 +100,6 @@ type Features struct {
 	RSA        RSAFeature
 	JWT        JWTFeature
 	SQL        SQLFeature
-	Redis      RedisFeature
-	Valkey     ValkeyFeature
 	HTTP       HTTPFeature
 	TLS        TLSFeature
 	Registry   RegistryFeature

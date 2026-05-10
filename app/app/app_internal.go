@@ -205,44 +205,23 @@ func (a *App) _startup_cache(ctx *AppContext) error {
 	case cacheTypeMem:
 		cFactory = factory.NewMemCacheFactory()
 	case cacheTypeRedis:
+		err := redis.InitDefault()
+		if err != nil {
+			return err
+		}
+
 		cFactory = factory.NewRedisCacheFactory(*redis.GetConnection(ctx))
 	case cacheTypeValkey:
+		err := valkey.InitDefault()
+		if err != nil {
+			return err
+		}
+
 		cFactory = factory.NewValkeyCacheFactory(valkey.GetConnection(ctx))
 	}
 	ctx = ctx.WithCacheFactory(cFactory)
 	a.state.CacheInitialized = true
 	l.Debug("[Startup Cache] cache initialized successfully")
-	return nil
-}
-
-func (a *App) _startup_redis(ctx *AppContext) error {
-	l := ctx.L()
-
-	l.Debug("[Startup Redis] initializing Redis client")
-	err := redis.Init(a.features.Redis.redisDB)
-	if err != nil {
-		l.Error("[Startup Redis] failed to initialize Redis client", zap.Error(err))
-		return err
-	}
-
-	a.state.RedisInitialized = true
-
-	l.Debug("[Startup Redis] Redis client initialized successfully")
-	return nil
-}
-
-func (a *App) _startup_valkey(ctx *AppContext) error {
-	l := ctx.L()
-
-	l.Debug("[Startup Valkey] initializing Valkey client")
-	err := valkey.Init(&a.features.Valkey.valkeyDB)
-	if err != nil {
-		l.Error("[Startup Valkey] failed to initialize Valkey client", zap.Error(err))
-		return err
-	}
-
-	a.state.ValkeyInitialized = true
-	l.Debug("[Startup Valkey] Valkey client initialized successfully")
 	return nil
 }
 
@@ -628,16 +607,6 @@ func (a *App) _startup(ctx context.Context) error {
 	if a.features.SQL.Enabled {
 		l.Info("[Startup] SQL enabled")
 		startup_funcs = append(startup_funcs, a._startup_sql)
-	}
-
-	if a.features.Redis.Enabled {
-		l.Info("[Startup] Redis enabled")
-		startup_funcs = append(startup_funcs, a._startup_redis)
-	}
-
-	if a.features.Valkey.Enabled {
-		l.Info("[Startup] Valkey enabled")
-		startup_funcs = append(startup_funcs, a._startup_valkey)
 	}
 
 	if a.features.Cache.Enabled {
