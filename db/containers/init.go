@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/ooqls/getset/registry"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -74,20 +73,21 @@ func applyOptions(c *testcontainers.ContainerRequest, opts ...Options) {
 	}
 }
 
-func requestContainer(ctx context.Context, req testcontainers.GenericContainerRequest, mappedPort string) (nat.Port, *testcontainers.Container, error) {
+func requestContainer(ctx context.Context, req testcontainers.GenericContainerRequest, mappedPort string) (int, *testcontainers.Container, error) {
 	container, err := testcontainers.GenericContainer(ctx, req)
 	if err != nil {
-		return nat.Port("0"), nil, fmt.Errorf("failed to request container: %v", err)
+		return 0, nil, fmt.Errorf("failed to request container: %v", err)
 	}
 
 	time.Sleep(time.Second * 10)
 
-	port, err := container.MappedPort(ctx, nat.Port(mappedPort))
+	port, err := container.MappedPort(ctx, mappedPort)
+
 	if err != nil {
-		return nat.Port("0"), nil, fmt.Errorf("failed to get mapped port: %v", err)
+		return 0, nil, fmt.Errorf("failed to get mapped port: %v", err)
 	}
 
-	return port, &container, nil
+	return int(port.Num()), &container, nil
 }
 
 func StartValkey(ctx context.Context, opts ...Options) testcontainers.Container {
@@ -111,12 +111,12 @@ func StartValkey(ctx context.Context, opts ...Options) testcontainers.Container 
 		panic(fmt.Errorf("failed to request container: %v", err))
 	}
 	time.Sleep(3 * time.Second)
-	zap.L().Debug("valkey should be running", zap.Int("port", port.Int()))
+	zap.L().Debug("valkey should be running", zap.Int("port", port))
 
 	reg.Valkey = &registry.Database{
 		Server: registry.Server{
 			Host: "localhost",
-			Port: port.Int(),
+			Port: port,
 		},
 	}
 	registry.Set(reg)
@@ -146,7 +146,7 @@ func StartRedis(ctx context.Context, opts ...Options) testcontainers.Container {
 		panic(fmt.Errorf("failed to request redis container: %v", err))
 	}
 	time.Sleep(3 * time.Second)
-	zap.L().Debug("redis should be running", zap.Int("port", port.Int()))
+	zap.L().Debug("redis should be running", zap.Int("port", port))
 
 	redisAuth, err := registry.NewAuthWithPassword("", "password")
 	if err != nil {
@@ -156,7 +156,7 @@ func StartRedis(ctx context.Context, opts ...Options) testcontainers.Container {
 		Database: "0",
 		Server: registry.Server{
 			Host: "localhost",
-			Port: port.Int(),
+			Port: port,
 			Auth: redisAuth,
 		},
 	}
@@ -194,7 +194,7 @@ func StartPostgres(ctx context.Context, opts ...Options) testcontainers.Containe
 		panic(fmt.Errorf("failed to request postgres container: %v", err))
 	}
 	time.Sleep(3 * time.Second)
-	zap.L().Debug("postgres should be running", zap.Int("port", port.Int()))
+	zap.L().Debug("postgres should be running", zap.Int("port", port))
 
 	pgAuth, err := registry.NewAuthWithPassword("user", "user100")
 	if err != nil {
@@ -204,7 +204,7 @@ func StartPostgres(ctx context.Context, opts ...Options) testcontainers.Containe
 		Database: "test",
 		Server: registry.Server{
 			Host: "localhost",
-			Port: port.Int(),
+			Port: port,
 			Auth: pgAuth,
 		},
 	}
@@ -249,7 +249,7 @@ func StartElasticsearch(ctx context.Context, opts ...Options) testcontainers.Con
 		panic(fmt.Errorf("failed to request an elasticsearch container: %v", err))
 	}
 	time.Sleep(3 * time.Second)
-	zap.L().Debug("elasticsearch should be running", zap.Int("port", port.Int()))
+	zap.L().Debug("elasticsearch should be running", zap.Int("port", port))
 
 	esAuth, err := registry.NewAuthWithPassword("elastic", "changeme")
 	if err != nil {
@@ -260,7 +260,7 @@ func StartElasticsearch(ctx context.Context, opts ...Options) testcontainers.Con
 		Server: registry.Server{
 			Protocol: "https",
 			Host:     "localhost",
-			Port:     port.Int(),
+			Port:     port,
 			Auth:     esAuth,
 			TLS: &registry.TLSConfig{
 				Enabled:               true,

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/gin-contrib/cors"
 	"github.com/ooqls/getset/log"
 	"go.uber.org/zap"
 )
@@ -66,13 +65,7 @@ func (a *App) IsRunning() bool {
 }
 
 func (a *App) OnStartup(f func(ctx *AppContext) error) *App {
-	a.setup = func(ctx *AppContext) error {
-		if a.features.Gin.Enabled {
-			a.features.Gin.Engine.Use(cors.New(*a.features.Gin.Cors))
-		}
-
-		return f(ctx)
-	}
+	a.setup = f
 	return a
 }
 

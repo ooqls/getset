@@ -45,7 +45,8 @@ func initValkey(db *registry.Database) error {
 
 	valkeyCfg = db
 	cliOpts := valkey.ClientOption{
-		InitAddress: []string{fmt.Sprintf("%s:%d", db.Host, db.Port)},
+		InitAddress:      []string{fmt.Sprintf("%s:%d", db.Host, db.Port)},
+		ConnWriteTimeout: 5 * time.Second,
 	}
 
 	if db.TLS != nil && db.TLS.Enabled {
@@ -80,15 +81,17 @@ func GetConnection(ctx context.Context) valkey.Client {
 	} else {
 		if err := c.Do(ctx, c.B().Ping().Build()).Error(); err != nil {
 			c = nil
-			for err != nil {
+			var reconnErr error
+			for {
 				m.Lock()
-				err := initValkey(valkeyCfg)
+				reconnErr = initValkey(valkeyCfg)
 				m.Unlock()
 
-				if err != nil {
-					zap.L().Error("valkey client was disconnected, reconnecting...")
-					time.Sleep(time.Second * 3)
+				if reconnErr == nil {
+					break
 				}
+				zap.L().Error("valkey client was disconnected, reconnecting...")
+				time.Sleep(time.Second * 3)
 			}
 		}
 	}

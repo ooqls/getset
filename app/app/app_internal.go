@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/ooqls/getset/cache/factory"
 	"github.com/ooqls/getset/crypto/jwt"
@@ -425,11 +426,24 @@ func (a *App) _startup_health(ctx *AppContext) error {
 
 }
 
+// _startup_gin attaches engine-wide Gin middleware (e.g. CORS) before any
+// routes are registered. gin only applies middleware to routes registered
+// after the e.Use call, so this must run during startup (before a.setup
+// registers handlers), not in _run_gin which runs afterwards.
+func (a *App) _startup_gin(ctx *AppContext) error {
+	if a.features.Gin.Cors != nil {
+		a.features.Gin.Engine.Use(cors.New(*a.features.Gin.Cors))
+	}
+	a.state.GinInitialized = true
+	return nil
+}
+
 func (a *App) _run_gin(ctx *AppContext) error {
 	l := a.l
+	e := a.features.Gin.Engine
 	server := &http.Server{
 		Addr:    fmt.Sprintf("0.0.0.0:%d", a.features.Gin.Port),
-		Handler: a.features.Gin.Engine,
+		Handler: e,
 	}
 
 	if a.features.TLS.Enabled {
@@ -588,6 +602,14 @@ func (a *App) _startup(ctx context.Context) error {
 	}
 
 	startup_funcs := []func(ctx *AppContext) error{}
+
+	// Gin/CORS must be set up before any feature registers routes (docs,
+	// health) and before a.setup registers handlers, because gin only applies
+	// engine middleware to routes added after the e.Use call.
+	if a.features.Gin.Enabled {
+		l.Info("[Startup] Gin enabled")
+		startup_funcs = append(startup_funcs, a._startup_gin)
+	}
 
 	if a.features.Registry.enabled {
 		l.Info("[Startup] registry enabled")
