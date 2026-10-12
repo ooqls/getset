@@ -5,99 +5,65 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strconv"
-	"sync"
-	"time"
 
+	"github.com/ooqls/getset/db/conn"
 	"github.com/ooqls/getset/registry"
 	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 )
 
-var pool *redis.Client
-var redisCfg *registry.Database
-var m sync.Mutex = sync.Mutex{}
-
-func Init(db registry.Database) error {
-	m.Lock()
-	defer m.Unlock()
-
-	return initRedis(&db)
-}
-
-func initRedis(db *registry.Database) error {
-	redisCfg = db
-
-	if pool != nil {
-		return nil
+var c = conn.New("redis", func() (*redis.Client, error) {
+	reg := registry.Get()
+	if reg.Redis == nil {
+		return nil, fmt.Errorf("no redis server found in registry")
 	}
+	return open(*reg.Redis)
+}, func(rc *redis.Client) error {
+	return rc.Close()
+})
 
+func open(db registry.Database) (*redis.Client, error) {
 	var tlsCfg *tls.Config
 	if db.TLS != nil {
 		var err error
 		tlsCfg, err = db.TLS.TLSConfig()
 		if err != nil {
-			return fmt.Errorf("failed to load tls config for redis: %v", err)
+			return nil, fmt.Errorf("failed to load tls config for redis: %v", err)
 		}
 	}
 
 	redisDb, err := strconv.Atoi(db.Database)
 	if err != nil {
-		return fmt.Errorf("failed to convert database string to int: %v", err)
+		return nil, fmt.Errorf("failed to convert database string to int: %v", err)
 	}
 
 	pw, err := db.Server.ResolvePassword()
 	if err != nil {
-		return fmt.Errorf("failed to resolve redis password: %v", err)
+		return nil, fmt.Errorf("failed to resolve redis password: %v", err)
 	}
 
-	pool = redis.NewClient(&redis.Options{
+	return redis.NewClient(&redis.Options{
 		Addr:      fmt.Sprintf("%s:%d", db.Host, db.Port),
 		Password:  pw,
 		Username:  db.Auth.Username,
 		DB:        redisDb,
 		TLSConfig: tlsCfg,
 		PoolSize:  3,
-	})
-
-	return nil
-
+	}), nil
 }
+
+// Init opens a client for db and makes it the one GetConnection returns.
+func Init(db registry.Database) error {
+	return c.Init(func() (*redis.Client, error) { return open(db) })
+}
+
+// InitDefault opens the client from the registry unless one is already open.
 func InitDefault() error {
-	m.Lock()
-	defer m.Unlock()
-
-	reg := registry.Get()
-	if reg.Redis == nil {
-		return fmt.Errorf("no redis server found in registry")
-	}
-
-	redisCfg = reg.Redis
-
-	return initRedis(redisCfg)
+	return c.InitDefault()
 }
 
+// GetConnection returns the client, opening it from the registry on first
+// use. It panics if the client can't be opened. The client reconnects on its
+// own, so a returned client may fail commands while Redis is unreachable.
 func GetConnection(ctx context.Context) *redis.Client {
-	if pool == nil {
-		if err := InitDefault(); err != nil {
-			panic(err)
-		}
-
-	} else {
-		if err := pool.Ping(ctx).Err(); err != nil {
-			zap.L().Error("redis client was disconnected, reconnecting...", zap.Error(err))
-			m.Lock()
-			pool.Close()
-			pool = nil
-			for {
-				err := initRedis(redisCfg)
-				if err == nil {
-					break
-				}
-				zap.L().Error("failed to reconnect to redis, retrying...", zap.Error(err))
-				time.Sleep(time.Second * 3)
-			}
-			m.Unlock()
-		}
-	}
-	return pool
+	return c.MustGet()
 }

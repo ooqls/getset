@@ -4,9 +4,12 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	"github.com/ooqls/getset/log"
 	"github.com/ooqls/getset/registry"
 	"go.uber.org/zap"
 )
+
+var l *zap.Logger = log.NewLogger("postgres")
 
 type Options struct {
 	Host string
