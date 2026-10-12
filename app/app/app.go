@@ -4,39 +4,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
-	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/ooqls/getset/log"
 	"go.uber.org/zap"
 )
 
-func init() {
-	flag.StringVar(&registryPathFlag, "registry", "", "Path to the registry path")
-	flag.StringVar(&sqlFilesFlag, "sql-files", "", "Comma separated list of files")
-	flag.StringVar(&rsaPrivKeyPathFlag, "rsa-private-key", "", "Path to an RSA private key")
-	flag.StringVar(&rsaPubKeyPathFlag, "rsa-public-key", "", "Path to the RSA public key")
-	flag.StringVar(&jwtPrivKeyPathFlag, "jwt-private-key", "", "Path to a JWT private key")
-	flag.StringVar(&jwtPubKeyPathFlag, "jwt-public-key", "", "Path to a jwt public key")
-	flag.StringVar(&tlsKeyPathFlag, "tls-key-path", "", "Path to the TLS key file")
-	flag.StringVar(&tlsCertPathFlag, "tls-cert-path", "", "Path to the TLS cert file")
-	flag.StringVar(&tlsCaPathFlag, "tls-ca-path", "", "Path to the TLS CA file")
-	flag.StringVar(&healthPathFlag, "health-path", "", "Path to the health path")
-	flag.IntVar(&docsPortFlag, "docs-port", 8080, "Port to serve docs on")
-	flag.StringVar(&docsPathFlag, "docs-path", "/docs/", "Path to the docs directory")
-	flag.StringVar(&docsApiPathFlag, "docs-api-path", "/api/docs", "Path to the docs API")
-}
-
 func New(appName string, features Features) *App {
 	return &App{
-		appName:    appName,
-		l:          log.NewLogger(appName),
-		features:   features,
-		threadWg:   &sync.WaitGroup{},
-		httpClient: http.DefaultClient,
+		appName:  appName,
+		l:        log.NewLogger(appName),
+		features: features,
 	}
 }
 
@@ -45,15 +26,11 @@ type App struct {
 	setup           func(ctx *AppContext) error
 	running         func(ctx *AppContext) error
 	stopped         func(ctx *AppContext) error
-	healthCheck     func() bool
 	onPanic         func(err interface{})
 	l               *zap.Logger
-	state           AppState
+	isRunning       atomic.Bool
 	features        Features
 	testEnvironment *TestEnvironment
-	httpClient      *http.Client
-	stopServers     []func() (string, error)
-	threadWg        *sync.WaitGroup
 }
 
 func (a *App) WithTestEnvironment(env TestEnvironment) {
@@ -61,7 +38,7 @@ func (a *App) WithTestEnvironment(env TestEnvironment) {
 }
 
 func (a *App) IsRunning() bool {
-	return a.state.Running
+	return a.isRunning.Load()
 }
 
 func (a *App) OnStartup(f func(ctx *AppContext) error) *App {
@@ -79,30 +56,29 @@ func (a *App) OnStopped(f func(ctx *AppContext) error) *App {
 	return a
 }
 
+// IsHealthy reports whether the App is running and, when the Health feature
+// is enabled, its last health check passed.
 func (a *App) IsHealthy() bool {
-	return a.state.Healthy
+	return a.IsRunning() && a.features.Health.healthy()
 }
 
 func (a *App) SetHealthCheck(f func() bool) *App {
-	a.healthCheck = f
+	a.features.Health.Check = f
 	return a
 }
 
+func (a *App) Features() *Features {
+	return &a.features
+}
+
+// Run starts every enabled feature, runs the lifecycle hooks, and blocks
+// until ctx is cancelled or the process receives SIGINT/SIGTERM.
 func (a *App) Run(ctx context.Context) error {
 	flag.Parse()
+	applyFlags(&a.features)
 
-	ctx, cancel := context.WithCancel(ctx)
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	errChan := make(chan error, 1)
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-signalChan
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	if a.testEnvironment != nil {
 		cleanup, err := a.testEnvironment.Start(context.Background())
@@ -112,23 +88,83 @@ func (a *App) Run(ctx context.Context) error {
 		defer cleanup()
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer close(errChan)
-		defer close(signalChan)
-		if err := a._startup(ctx); err != nil {
-			a.l.Error("failed to startup app", zap.Error(err))
-			errChan <- err
-		}
-	}()
-
-	err := <-errChan
-	wg.Wait()
-
+	err := a.run(ctx)
+	if err != nil {
+		a.l.Error("app stopped with an error", zap.Error(err))
+	}
 	return err
 }
 
-func (a *App) Features() *Features {
-	return &a.features
+func (a *App) run(parent context.Context) (err error) {
+	l := a.l
+	if a.onPanic != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				l.Warn("recovered from panic", zap.Any("error", r))
+				a.onPanic(r)
+			}
+		}()
+	}
+
+	ctx, cancel := context.WithCancel(parent)
+	appCtx := NewAppContext(ctx, l)
+	// On failure, stop whatever already started before returning.
+	defer func() {
+		if err != nil {
+			cancel()
+			appCtx.wg.Wait()
+		}
+	}()
+	defer cancel()
+
+	fs := &a.features
+	for _, f := range fs.ordered() {
+		if !f.enabled() {
+			continue
+		}
+		l.Info("[Startup] starting feature", zap.String("feature", f.name()))
+		if err := f.start(appCtx, fs); err != nil {
+			return fmt.Errorf("failed to start %s: %w", f.name(), err)
+		}
+	}
+
+	if a.setup != nil {
+		l.Debug("[Startup] running OnStartup")
+		if err := a.setup(appCtx); err != nil {
+			return fmt.Errorf("OnStartup failed: %w", err)
+		}
+	}
+
+	for _, f := range fs.ordered() {
+		s, ok := f.(server)
+		if !ok || !s.enabled() {
+			continue
+		}
+		l.Info("[Serve] serving feature", zap.String("feature", s.name()))
+		if err := s.serve(appCtx, fs); err != nil {
+			return fmt.Errorf("failed to serve %s: %w", s.name(), err)
+		}
+	}
+
+	a.isRunning.Store(true)
+	if a.running != nil {
+		appCtx.spawn(func() {
+			l.Debug("[Running] running OnRunning")
+			if err := a.running(appCtx); err != nil {
+				l.Error("[Running] OnRunning returned an error", zap.Error(err))
+			}
+		})
+	}
+
+	appCtx.wg.Wait()
+	a.isRunning.Store(false)
+	l.Debug("[Stopped] app stopped")
+
+	if a.stopped != nil {
+		if err := a.stopped(appCtx); err != nil {
+			return fmt.Errorf("OnStopped failed: %w", err)
+		}
+	}
+
+	return nil
 }

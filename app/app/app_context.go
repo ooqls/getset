@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"sync"
 
 	"github.com/ooqls/getset/cache/factory"
 	"github.com/ooqls/getset/crypto/jwt"
@@ -18,6 +19,7 @@ func NewAppContext(ctx context.Context, l *zap.Logger) *AppContext {
 	return &AppContext{
 		l:                    l,
 		Context:              ctx,
+		wg:                   &sync.WaitGroup{},
 		issuerToTokenConfigs: make(map[string]jwt.TokenConfiguration),
 	}
 }
@@ -25,6 +27,7 @@ func NewAppContext(ctx context.Context, l *zap.Logger) *AppContext {
 type AppContext struct {
 	context.Context
 	l                    *zap.Logger
+	wg                   *sync.WaitGroup
 	issuerToTokenConfigs map[string]jwt.TokenConfiguration
 	cacheFactory         factory.CacheFactory
 	emailClient          email.EmailClient
@@ -32,6 +35,11 @@ type AppContext struct {
 
 func (ctx *AppContext) L() *zap.Logger {
 	return ctx.l
+}
+
+// spawn runs f in a goroutine the App waits for before it stops.
+func (ctx *AppContext) spawn(f func()) {
+	ctx.wg.Go(f)
 }
 
 func (ctx *AppContext) AuthIssuerConfig() (*jwt.TokenConfiguration, bool) {

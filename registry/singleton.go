@@ -18,6 +18,13 @@ func Set(reg Registry) {
 	r = &reg
 }
 
+// IsSet reports whether a registry has been loaded, so Get will not panic.
+func IsSet() bool {
+	m.Lock()
+	defer m.Unlock()
+	return r != nil
+}
+
 func Get() *Registry {
 	m.Lock()
 	defer m.Unlock()
