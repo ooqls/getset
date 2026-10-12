@@ -76,14 +76,16 @@ func SQLX(opts ...sqlOpt) SQLFeature {
 }
 
 func PGX(opts ...sqlOpt) SQLFeature {
-	return newSQLFeature(SQLXPackage, opts...)
+	return newSQLFeature(PGXPackage, opts...)
 }
 
 func newSQLFeature(sp sqlPackage, opts ...sqlOpt) SQLFeature {
 	f := SQLFeature{
 		Enabled:    true,
-		SQLFiles:   strings.Split(sqlFilesFlag, ","),
 		SQLPackage: sp,
+	}
+	if sqlFilesFlag != "" {
+		f.SQLFiles = strings.Split(sqlFilesFlag, ",")
 	}
 
 	for _, opt := range opts {
