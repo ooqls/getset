@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ooqls/getset/cache/factory"
 	"github.com/ooqls/getset/crypto/jwt"
 	"github.com/ooqls/getset/crypto/keys"
 	"github.com/ooqls/getset/db/pgx"
@@ -177,9 +176,18 @@ func TestAppWithTestEnvironment(t *testing.T) {
 		Redis: Redis(),
 		Cache: Cache(WithRedis()),
 	})
-	cacheFactory := make(chan factory.CacheFactory, 1)
+	cacheErr := make(chan error, 1)
 	app.OnRunning(func(ctx *AppContext) error {
-		cacheFactory <- ctx.CacheFactory()
+		c := ctx.CacheFactory().NewCache("test", time.Minute)
+		err := c.Set(ctx, "k", "v")
+		var got string
+		if err == nil {
+			err = c.Get(ctx, "k", &got)
+		}
+		if err == nil && got != "v" {
+			err = fmt.Errorf("expected cached value v, got %q", got)
+		}
+		cacheErr <- err
 		<-ctx.Done()
 		return nil
 	})
@@ -203,7 +211,7 @@ func TestAppWithTestEnvironment(t *testing.T) {
 		return app.IsHealthy() && app.IsRunning()
 	}, 60*time.Second, 1*time.Second, "expected app to be healthy")
 
-	assert.IsType(t, &factory.RedisCacheFactory{}, <-cacheFactory, "cache should be backed by the Redis feature")
+	assert.NoError(t, <-cacheErr, "cache should round-trip through the Redis feature")
 
 	r := redis.GetConnection(ctx)
 	defer r.Close()

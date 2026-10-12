@@ -84,13 +84,19 @@ func GetConnection(ctx context.Context) *redis.Client {
 
 	} else {
 		if err := pool.Ping(ctx).Err(); err != nil {
+			zap.L().Error("redis client was disconnected, reconnecting...", zap.Error(err))
+			m.Lock()
+			pool.Close()
 			pool = nil
-			for err != nil {
-				if err := initRedis(redisCfg); err != nil {
-					zap.L().Error("redis client was diconnected, reconnecting...")
-					time.Sleep(time.Second * 3)
+			for {
+				err := initRedis(redisCfg)
+				if err == nil {
+					break
 				}
+				zap.L().Error("failed to reconnect to redis, retrying...", zap.Error(err))
+				time.Sleep(time.Second * 3)
 			}
+			m.Unlock()
 		}
 	}
 	return pool
