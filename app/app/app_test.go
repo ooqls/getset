@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"sync"
 	"testing"
@@ -62,8 +64,8 @@ func TestAppWithRegistry(t *testing.T) {
 			WithServerCert(certPath),
 			WithServerKey(keyPath),
 		),
-		HTTP:       HTTP(WithHttpPort(8082)),
-		LoggingAPI: LoggingApi(WithLoggingApiPort(8081)),
+		HTTP:       HTTP(),
+		LoggingAPI: LoggingApi(),
 		Health:     Health(WithHealthPath("/health"), WithHealthInterval(1)),
 	})
 
@@ -85,9 +87,107 @@ func TestAppWithRegistry(t *testing.T) {
 
 }
 
+func TestApp_StartupErrorNamesFeature(t *testing.T) {
+	setupRan := false
+	app := New("test", Features{Registry: Registry(WithRegistryPath("/does/not/exist.yaml"))})
+	app.OnStartup(func(ctx *AppContext) error {
+		setupRan = true
+		return nil
+	})
+
+	err := app.Run(context.Background())
+	assert.ErrorIs(t, err, ErrRegistryFileNotFound)
+	assert.ErrorContains(t, err, "registry")
+	assert.False(t, setupRan, "OnStartup should not run after a feature fails")
+}
+
+func TestApp_ServesRoutesRegisteredInOnStartupThenStopsOnCancel(t *testing.T) {
+	app := New("test", Features{HTTP: HTTP()})
+	app.OnStartup(func(ctx *AppContext) error {
+		app.Features().HTTP.Mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("hi"))
+		})
+		return nil
+	})
+
+	var body string
+	var stoppedCalled bool
+	ctx, cancel := context.WithCancel(context.Background())
+	app.OnRunning(func(appCtx *AppContext) error {
+		defer cancel()
+		_, body = get(t, http.DefaultClient, fmt.Sprintf("http://localhost:%d/hello", port(app.Features().HTTP.Addr())))
+		return nil
+	})
+	app.OnStopped(func(ctx *AppContext) error {
+		stoppedCalled = true
+		return nil
+	})
+
+	assert.NoError(t, app.Run(ctx))
+	assert.Equal(t, "hi", body)
+	assert.True(t, stoppedCalled)
+	assert.False(t, app.IsRunning())
+
+	_, err := net.Dial("tcp", app.Features().HTTP.Addr().String())
+	assert.Error(t, err, "HTTP server should be closed after Run returns")
+}
+
+func TestApp_ServeFailureStopsServersAlreadyStarted(t *testing.T) {
+	taken, err := net.Listen("tcp", "0.0.0.0:0")
+	assert.NoError(t, err)
+	defer taken.Close()
+
+	app := New("test", Features{
+		Gin:  Gin(WithGinPort(0)),
+		HTTP: HTTP(WithHttpPort(port(taken.Addr()))),
+	})
+
+	done := make(chan error)
+	go func() { done <- app.Run(context.Background()) }()
+
+	select {
+	case err := <-done:
+		assert.ErrorContains(t, err, "failed to serve http")
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run should return when a server fails to start, not hang")
+	}
+
+	_, err = net.Dial("tcp", app.Features().Gin.Addr().String())
+	assert.Error(t, err, "Gin should be shut down when HTTP fails to serve")
+}
+
+func TestApp_IsHealthyFollowsHealthCheck(t *testing.T) {
+	app := New("test", Features{HTTP: HTTP(), Health: Health(WithHealthPath("/health"))})
+	app.SetHealthCheck(func() bool { return false })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	app.OnRunning(func(appCtx *AppContext) error {
+		defer cancel()
+		assert.True(t, app.IsHealthy(), "healthy until a check fails")
+		get(t, http.DefaultClient, fmt.Sprintf("http://localhost:%d/health", port(app.Features().HTTP.Addr())))
+		assert.False(t, app.IsHealthy())
+		return nil
+	})
+	assert.NoError(t, app.Run(ctx))
+}
+
 func TestAppWithTestEnvironment(t *testing.T) {
-	app := New("test", Features{})
+	app := New("test", Features{
+		Redis: Redis(),
+		Cache: Cache(WithRedis()),
+	})
+	cacheErr := make(chan error, 1)
 	app.OnRunning(func(ctx *AppContext) error {
+		c := ctx.CacheFactory().NewCache("test", time.Minute)
+		err := c.Set(ctx, "k", "v")
+		var got string
+		if err == nil {
+			err = c.Get(ctx, "k", &got)
+		}
+		if err == nil && got != "v" {
+			err = fmt.Errorf("expected cached value v, got %q", got)
+		}
+		cacheErr <- err
 		<-ctx.Done()
 		return nil
 	})
@@ -110,6 +210,8 @@ func TestAppWithTestEnvironment(t *testing.T) {
 		l.Info("checking if app is healthy and running", zap.Bool("healthy", app.IsHealthy()), zap.Bool("running", app.IsRunning()))
 		return app.IsHealthy() && app.IsRunning()
 	}, 60*time.Second, 1*time.Second, "expected app to be healthy")
+
+	assert.NoError(t, <-cacheErr, "cache should round-trip through the Redis feature")
 
 	r := redis.GetConnection(ctx)
 	defer r.Close()

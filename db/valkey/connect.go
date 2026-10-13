@@ -3,47 +3,25 @@ package valkey
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/ooqls/getset/db/conn"
 	"github.com/ooqls/getset/registry"
 	"github.com/valkey-io/valkey-go"
-	"go.uber.org/zap"
 )
 
-var valkeyCfg *registry.Database
-var m sync.Mutex = sync.Mutex{}
-var c valkey.Client
-
-func Init(db *registry.Database) error {
-	m.Lock()
-	defer m.Unlock()
-
-	return initValkey(db)
-}
-
-func InitDefault() error {
-	m.Lock()
-	defer m.Unlock()
-
-	if c != nil {
-		return nil
-	}
-
+var c = conn.New("valkey", func() (valkey.Client, error) {
 	reg := registry.Get()
 	if reg.Valkey == nil {
-		return fmt.Errorf("valkey not found in registry")
+		return nil, fmt.Errorf("valkey not found in registry")
 	}
+	return open(reg.Valkey)
+}, func(vc valkey.Client) error {
+	vc.Close()
+	return nil
+})
 
-	return initValkey(reg.Valkey)
-}
-
-func initValkey(db *registry.Database) error {
-	if c != nil {
-		return nil
-	}
-
-	valkeyCfg = db
+func open(db *registry.Database) (valkey.Client, error) {
 	cliOpts := valkey.ClientOption{
 		InitAddress:      []string{fmt.Sprintf("%s:%d", db.Host, db.Port)},
 		ConnWriteTimeout: 5 * time.Second,
@@ -52,49 +30,36 @@ func initValkey(db *registry.Database) error {
 	if db.TLS != nil && db.TLS.Enabled {
 		tlsCfg, err := db.TLS.TLSConfig()
 		if err != nil {
-			return err
+			return nil, err
 		}
-
 		cliOpts.TLSConfig = tlsCfg
 	}
 
 	if db.Auth.Enabled {
 		pw, err := db.Server.ResolvePassword()
 		if err != nil {
-			return fmt.Errorf("failed to resolve valkey password: %v", err)
+			return nil, fmt.Errorf("failed to resolve valkey password: %v", err)
 		}
 		cliOpts.Username = db.Auth.Username
 		cliOpts.Password = pw
 	}
 
-	var err error
-	c, err = valkey.NewClient(cliOpts)
-	return err
+	return valkey.NewClient(cliOpts)
 }
 
+// Init opens a client for db and makes it the one GetConnection returns.
+func Init(db *registry.Database) error {
+	return c.Init(func() (valkey.Client, error) { return open(db) })
+}
+
+// InitDefault opens the client from the registry unless one is already open.
+func InitDefault() error {
+	return c.InitDefault()
+}
+
+// GetConnection returns the client, opening it from the registry on first
+// use. It panics if the client can't be opened. The client reconnects on its
+// own.
 func GetConnection(ctx context.Context) valkey.Client {
-	if c == nil {
-		err := InitDefault()
-		if err != nil {
-			panic(fmt.Errorf("failed to init valkey: %v", err))
-		}
-	} else {
-		if err := c.Do(ctx, c.B().Ping().Build()).Error(); err != nil {
-			c = nil
-			var reconnErr error
-			for {
-				m.Lock()
-				reconnErr = initValkey(valkeyCfg)
-				m.Unlock()
-
-				if reconnErr == nil {
-					break
-				}
-				zap.L().Error("valkey client was disconnected, reconnecting...")
-				time.Sleep(time.Second * 3)
-			}
-		}
-	}
-
-	return c
+	return c.MustGet()
 }

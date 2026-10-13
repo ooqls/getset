@@ -7,8 +7,8 @@ docs:
   docs_api_path: "/api/docs"  # Path for docs API
   docs_dir: "./docs"           # Directory containing documentation files
 
-server:
-  enabled: true  # Enable or disable the server
+gin:
+  enabled: true  # Enable or disable the Gin server
   port: 8080     # Port for the server to listen on
 
 tls:
@@ -27,7 +27,9 @@ jwt:
 
 sql:
   enabled: true                # Enable or disable SQL file loading
-  sql_files_dir: "./sql"      # Directory containing SQL files
+  sql_package: "PGX"           # PGX or SQLX
+  sql_files_dirs:
+    - "./sql"                 # Directories containing SQL files
   sql_files:
     - "init.sql"              # List of SQL files to load
     - "data.sql"
@@ -39,3 +41,12 @@ sql:
 registry:
   enabled: false               # Enable or disable registry
   path: "./registry.db"        # Path to registry file 
+
+redis:
+  enabled: false               # Connect to Redis; fields override the registry's redis entry
+  host: ""
+  port: 6379
+
+cache:
+  enabled: false
+  cache_type: "mem"            # mem, redis (needs redis enabled) or valkey (needs valkey enabled)

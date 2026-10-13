@@ -2,103 +2,49 @@ package sqlx
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/jmoiron/sqlx"
 
 	_ "github.com/lib/pq"
+	"github.com/ooqls/getset/db/conn"
 	"github.com/ooqls/getset/db/postgres"
-	log "github.com/ooqls/getset/log"
-	"go.uber.org/zap"
+	"github.com/ooqls/getset/log"
 )
 
-var db *sqlx.DB
-var l *zap.Logger = log.NewLogger("db")
-var m sync.Mutex = sync.Mutex{}
+var l = log.NewLogger("db")
 
-func GetSQLX() *sqlx.DB {
-	var err error
-	if db != nil {
-		err = postgres.Retry(func() error {
-			return db.Ping()
-		})
-		if err != nil {
-			l.Error("failed to ensure connection", zap.Error(err))
-		}
-	}
+var c = conn.New("sqlx", func() (*sqlx.DB, error) {
+	return open(postgres.GetRegistryOptions())
+}, func(db *sqlx.DB) error {
+	return db.Close()
+})
 
-	if db == nil || err != nil {
-		if db != nil {
-			db.Close()
-		}
-
-		db, err = connectSqlx(postgres.GetRegistryOptions())
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	l.Info("SQLX database connection established")
-	return db
-}
-
-func connectSqlx(opt postgres.Options) (*sqlx.DB, error) {
-	conStr := fmt.Sprintf("host=%s password=%s port=%d user=%s dbname=%s sslmode=disable",
+func open(opt postgres.Options) (*sqlx.DB, error) {
+	dsn := fmt.Sprintf("host=%s password=%s port=%d user=%s dbname=%s sslmode=disable",
 		opt.Host, opt.Pw, opt.Port, opt.User, opt.DB)
-	l.Info("connection string", zap.String("con", conStr))
-	dbCon, err := sqlx.Open("postgres", conStr)
+	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sql: %v", err)
 	}
-
-	db = dbCon
-
-	return dbCon, nil
+	return db, nil
 }
 
+// GetSQLX returns the database, opening it from the registry on first use.
+// It panics if the database can't be opened.
+func GetSQLX() *sqlx.DB {
+	return c.MustGet()
+}
+
+// Init opens a database with opt and makes it the one GetSQLX returns.
 func Init(opt postgres.Options) (*sqlx.DB, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	err := initSQLX(opt)
-	return db, err
+	if err := c.Init(func() (*sqlx.DB, error) { return open(opt) }); err != nil {
+		return nil, err
+	}
+	return c.MustGet(), nil
 }
 
+// InitDefault opens the database from the registry unless one is already
+// open.
 func InitDefault() error {
-	m.Lock()
-	defer m.Unlock()
-
-	err := initSQLX(postgres.GetRegistryOptions()) // Updated to use GetOptions()
-	if err != nil {
-		l.Error("failed to initialize default options", zap.Error(err))
-		return err
-	}
-	l.Info("default options initialized successfully")
-	return nil
-}
-
-func initSQLX(opt postgres.Options) error {
-	var err error
-	if db != nil {
-		err = postgres.Retry(func() error {
-			return db.Ping()
-		})
-		if err != nil {
-			l.Error("failed to ensure connection", zap.Error(err))
-		}
-	}
-
-	if db == nil || err != nil {
-		if db != nil {
-			db.Close()
-		}
-
-		db, err = connectSqlx(opt)
-		if err != nil {
-			return err
-		}
-	}
-
-	l.Info("SQLX database connection established")
-	return nil
+	return c.InitDefault()
 }
