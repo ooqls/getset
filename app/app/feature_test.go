@@ -288,7 +288,6 @@ func TestSQLite_OpensDatabaseAndAppliesSchema(t *testing.T) {
 
 	db, err := dbsqlite.Get("feature-test")
 	require.NoError(t, err)
-	defer db.Close()
 	_, err = db.Exec("INSERT INTO things (id) VALUES (1)")
 	assert.NoError(t, err)
 }
