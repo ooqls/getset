@@ -216,7 +216,7 @@ func TestGin_CorsAppliesToRoutesAddedAfterStart(t *testing.T) {
 func TestCache_DefaultsToMemory(t *testing.T) {
 	fs := &Features{Cache: Cache()}
 	ctx := startFeatures(t, fs)
-	assert.NotNil(t, ctx.cacheFactory)
+	assert.NotNil(t, ctx.cacheStore)
 }
 
 func TestCache_RedisNeedsRedisFeature(t *testing.T) {

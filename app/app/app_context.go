@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ooqls/getset/cache/factory"
+	"github.com/ooqls/getset/cache/cache"
 	"github.com/ooqls/getset/crypto/jwt"
 	"github.com/ooqls/getset/email"
 	"go.uber.org/zap"
@@ -29,7 +29,7 @@ type AppContext struct {
 	l                    *zap.Logger
 	wg                   *sync.WaitGroup
 	issuerToTokenConfigs map[string]jwt.TokenConfiguration
-	cacheFactory         factory.CacheFactory
+	cacheStore           cache.Store
 	emailClient          email.EmailClient
 }
 
@@ -52,20 +52,22 @@ func (ctx *AppContext) RefreshIssuerConfig() (*jwt.TokenConfiguration, bool) {
 	return &config, ok
 }
 
-func (ctx *AppContext) CacheFactory() factory.CacheFactory {
-	if ctx.cacheFactory == nil {
-		ctx.L().Warn("cache factory not set, using memory caching")
-		ctx.cacheFactory = factory.NewMemCacheFactory()
+// CacheStore returns the store the Cache feature chose, or an in-memory
+// store when the Cache feature is off. Use cache.New to get a namespace in it.
+func (ctx *AppContext) CacheStore() cache.Store {
+	if ctx.cacheStore == nil {
+		ctx.L().Warn("cache store not set, using memory caching")
+		ctx.cacheStore = cache.NewMemStore()
 	}
 
-	return ctx.cacheFactory
+	return ctx.cacheStore
 }
 
 func (ctx *AppContext) EmailClient() (email.EmailClient, bool) {
 	return ctx.emailClient, ctx.emailClient != nil
 }
 
-func (ctx *AppContext) WithCacheFactory(factory factory.CacheFactory) *AppContext {
-	ctx.cacheFactory = factory
+func (ctx *AppContext) WithCacheStore(store cache.Store) *AppContext {
+	ctx.cacheStore = store
 	return ctx
 }
