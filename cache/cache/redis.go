@@ -1,39 +1,72 @@
 package cache
 
 import (
-	"crypto/tls"
+	"context"
+	"errors"
+	"strings"
+	"time"
 
-	"github.com/ooqls/getset/log"
-	goredis "github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
+	"github.com/redis/go-redis/v9"
 )
 
-var l *zap.Logger = log.NewLogger("cache")
+// scanCount is how many keys DeletePrefix asks Redis/Valkey for per SCAN.
+const scanCount = 100
 
-type RedisOptions struct {
-	Username string
-	Password string
-	Addr     string
-	DB       int
-	TLS      *TLS
+type redisStore struct {
+	rc *redis.Client
 }
 
-func (o *RedisOptions) GetGoRedisOptions() *goredis.Options {
-	var tlsCfg *tls.Config
-	var err error
+// NewRedisStore returns a Store backed by rc.
+func NewRedisStore(rc *redis.Client) Store {
+	return &redisStore{rc: rc}
+}
 
-	if o.TLS != nil {
-		tlsCfg, err = o.TLS.GetTLSConfig()
+func (s *redisStore) Get(ctx context.Context, key string) ([]byte, error) {
+	b, err := s.rc.Get(ctx, key).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return nil, ErrNotFound
+	}
+	return b, err
+}
+
+func (s *redisStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	return s.rc.Set(ctx, key, value, ttl).Err()
+}
+
+func (s *redisStore) Delete(ctx context.Context, key string) error {
+	return s.rc.Del(ctx, key).Err()
+}
+
+func (s *redisStore) DeletePrefix(ctx context.Context, prefix string) error {
+	var cursor uint64
+	for {
+		keys, next, err := s.rc.Scan(ctx, cursor, globPrefix(prefix), scanCount).Result()
 		if err != nil {
-			l.Info("failed to get tls config", zap.Error(err))
+			return err
 		}
+		if len(keys) > 0 {
+			if err := s.rc.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+		if next == 0 {
+			return nil
+		}
+		cursor = next
 	}
+}
 
-	return &goredis.Options{
-		Addr:      o.Addr,
-		Username:  o.Username,
-		Password:  o.Password,
-		DB:        o.DB,
-		TLSConfig: tlsCfg,
+// globPrefix returns a SCAN MATCH pattern for keys starting with prefix,
+// escaping glob characters so prefix is matched literally.
+func globPrefix(prefix string) string {
+	var b strings.Builder
+	for _, r := range prefix {
+		switch r {
+		case '*', '?', '[', ']', '\\':
+			b.WriteRune('\\')
+		}
+		b.WriteRune(r)
 	}
+	b.WriteRune('*')
+	return b.String()
 }

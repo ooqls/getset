@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ooqls/getset/cache/cache"
 	"github.com/ooqls/getset/crypto/jwt"
 	"github.com/ooqls/getset/crypto/keys"
 	"github.com/ooqls/getset/db/pgx"
@@ -178,7 +179,7 @@ func TestAppWithTestEnvironment(t *testing.T) {
 	})
 	cacheErr := make(chan error, 1)
 	app.OnRunning(func(ctx *AppContext) error {
-		c := ctx.CacheFactory().NewCache("test", time.Minute)
+		c := cache.New(ctx.CacheStore(), "test", time.Minute)
 		err := c.Set(ctx, "k", "v")
 		var got string
 		if err == nil {

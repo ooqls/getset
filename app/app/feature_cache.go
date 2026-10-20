@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	"github.com/ooqls/getset/cache/factory"
+	"github.com/ooqls/getset/cache/cache"
 	"github.com/ooqls/getset/db/redis"
 	"github.com/ooqls/getset/db/valkey"
 )
@@ -41,7 +41,7 @@ func WithMem() CacheOption {
 	return func(f *CacheFeature) { f.CacheType = cacheTypeMem }
 }
 
-// CacheFeature puts a cache factory on the AppContext. An empty CacheType
+// CacheFeature puts a cache store on the AppContext. An empty CacheType
 // means in-memory.
 type CacheFeature struct {
 	Enabled   bool
@@ -66,17 +66,17 @@ func (f *CacheFeature) enabled() bool { return f.Enabled }
 func (f *CacheFeature) start(ctx *AppContext, fs *Features) error {
 	switch f.CacheType {
 	case "", cacheTypeMem:
-		ctx.WithCacheFactory(factory.NewMemCacheFactory())
+		ctx.WithCacheStore(cache.NewMemStore())
 	case cacheTypeRedis:
 		if !fs.Redis.Enabled {
 			return fmt.Errorf("cache type redis needs the Redis feature enabled")
 		}
-		ctx.WithCacheFactory(factory.NewRedisCacheFactory(*redis.GetConnection(ctx)))
+		ctx.WithCacheStore(cache.NewRedisStore(redis.GetConnection(ctx)))
 	case cacheTypeValkey:
 		if !fs.Valkey.Enabled {
 			return fmt.Errorf("cache type valkey needs the Valkey feature enabled")
 		}
-		ctx.WithCacheFactory(factory.NewValkeyCacheFactory(valkey.GetConnection(ctx)))
+		ctx.WithCacheStore(cache.NewValkeyStore(valkey.GetConnection(ctx)))
 	default:
 		return fmt.Errorf("unknown cache type %q", f.CacheType)
 	}

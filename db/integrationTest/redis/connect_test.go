@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ooqls/getset/cache/cache"
+	"github.com/ooqls/getset/cache/cachetest"
 	"github.com/ooqls/getset/db/containers"
 	"github.com/ooqls/getset/db/redis"
 	"github.com/stretchr/testify/assert"
@@ -36,14 +37,8 @@ func TestConnectRedis(t *testing.T) {
 	assert.Nilf(t, res.Err(), "should not have gotten an error when pinging redis")
 }
 
-func TestRedisCacheRoundTrip(t *testing.T) {
-	ctx := context.Background()
-	c := cache.NewGenericCache("test", cache.NewRedisCache(*redis.GetConnection(ctx), time.Minute))
-	require.NoError(t, c.Set(ctx, "key", "value"))
-
-	var got string
-	require.NoError(t, c.Get(ctx, "key", &got))
-	assert.Equal(t, "value", got)
+func TestRedisCacheStore(t *testing.T) {
+	cachetest.Run(t, cache.NewRedisStore(redis.GetConnection(context.Background())))
 }
 
 // Runs last: it stops the shared container.

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/ooqls/getset/cache/cache"
+	"github.com/ooqls/getset/cache/cachetest"
 	"github.com/ooqls/getset/db/containers"
 	"github.com/ooqls/getset/db/valkey"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
@@ -28,12 +28,6 @@ func TestConnectValkey(t *testing.T) {
 	assert.NotNilf(t, con, "valkey client should not be nil")
 }
 
-func TestValkeyCacheRoundTrip(t *testing.T) {
-	ctx := context.Background()
-	c := cache.NewGenericCache("test", cache.NewValkeyCache(valkey.GetConnection(ctx), time.Minute))
-	require.NoError(t, c.Set(ctx, "key", "value"))
-
-	var got string
-	require.NoError(t, c.Get(ctx, "key", &got))
-	assert.Equal(t, "value", got)
+func TestValkeyCacheStore(t *testing.T) {
+	cachetest.Run(t, cache.NewValkeyStore(valkey.GetConnection(context.Background())))
 }

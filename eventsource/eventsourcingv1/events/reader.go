@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eko/gocache/lib/v4/cache"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/ooqls/getset/cache/cache"
+	"github.com/ooqls/getset/db/redis"
 	"github.com/ooqls/getset/eventsource/eventsourcingv1"
 )
 
@@ -21,16 +22,14 @@ type Reader interface {
 }
 
 type Options struct {
-	cache cache.CacheInterface[[]eventsourcingv1.Event]
+	cache *cache.Cache
 }
 
 type opt func(o *Options)
 
 func WithRedisCache() opt {
 	return func(o *Options) {
-		redisCached := eventsourcingv1.NewRedisCache[string]()
-		cache := eventsourcingv1.NewJsonCache[[]eventsourcingv1.Event](redisCached)
-		o.cache = cache
+		o.cache = cache.New(cache.NewRedisStore(redis.GetConnection(context.Background())), "events", 0)
 	}
 }
 
@@ -54,7 +53,8 @@ type SQLReader struct {
 
 func (r *SQLReader) Get(ctx context.Context, entityId uuid.UUID) (eventsourcingv1.Iterator[eventsourcingv1.Event], error) {
 	if r.options.cache != nil {
-		cached, err := r.options.cache.Get(ctx, entityId)
+		var cached []eventsourcingv1.Event
+		err := r.options.cache.Get(ctx, entityId.String(), &cached)
 		if err == nil {
 			return eventsourcingv1.NewArrayEventIterator(cached), nil
 		}
