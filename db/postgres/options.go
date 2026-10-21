@@ -3,6 +3,7 @@ package postgres
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
 
 	"github.com/ooqls/getset/log"
 	"github.com/ooqls/getset/registry"
@@ -20,12 +21,20 @@ type Options struct {
 	Tls  *tls.Config
 }
 
+// ConnectionString returns a postgres:// URL. The user, password and database
+// are escaped, so they may contain any character.
 func (opt *Options) ConnectionString() string {
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", opt.User, opt.Pw, opt.Host, opt.Port, opt.DB)
-	return url
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(opt.User, opt.Pw),
+		Host:   fmt.Sprintf("%s:%d", opt.Host, opt.Port),
+		Path:   "/" + opt.DB,
+	}
+	return u.String()
 }
 
-var dbName string = "postgres"
+// defaultDB is used when the registry's Postgres entry names no database.
+const defaultDB = "postgres"
 
 func GetRegistryOptions() Options {
 	reg := registry.Get()
@@ -44,12 +53,17 @@ func GetRegistryOptions() Options {
 		panic(err)
 	}
 
+	db := reg.Postgres.Database
+	if db == "" {
+		db = defaultDB
+	}
+
 	return Options{
 		Host: reg.Postgres.Host,
 		Port: reg.Postgres.Port,
 		User: reg.Postgres.Auth.Username,
 		Pw:   pw,
-		DB:   dbName,
+		DB:   db,
 		Tls:  tlsCfg,
 	}
 }

@@ -201,7 +201,7 @@ func StartPostgres(ctx context.Context, opts ...Options) testcontainers.Containe
 		panic(fmt.Errorf("failed to create postgres auth: %v", err))
 	}
 	reg.Postgres = &registry.Database{
-		Database: "test",
+		Database: "postgres",
 		Server: registry.Server{
 			Host: "localhost",
 			Port: port,

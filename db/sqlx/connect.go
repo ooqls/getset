@@ -20,9 +20,7 @@ var c = conn.New("sqlx", func() (*sqlx.DB, error) {
 })
 
 func open(opt postgres.Options) (*sqlx.DB, error) {
-	dsn := fmt.Sprintf("host=%s password=%s port=%d user=%s dbname=%s sslmode=disable",
-		opt.Host, opt.Pw, opt.Port, opt.User, opt.DB)
-	db, err := sqlx.Open("postgres", dsn)
+	db, err := sqlx.Open("postgres", opt.ConnectionString()+"?sslmode=disable")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sql: %v", err)
 	}
