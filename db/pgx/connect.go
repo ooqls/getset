@@ -9,7 +9,11 @@ import (
 )
 
 var c = conn.New("pgx", func() (*pgxpool.Pool, error) {
-	return open(context.Background(), postgres.GetRegistryOptions())
+	opts, err := postgres.GetRegistryOptions(nil)
+	if err != nil {
+		return nil, err
+	}
+	return open(context.Background(), opts)
 }, func(p *pgxpool.Pool) error {
 	p.Close()
 	return nil
@@ -25,12 +29,17 @@ func GetPGX() *pgxpool.Pool {
 	return c.MustGet()
 }
 
+// Get is the error-returning counterpart of GetPGX.
+func Get() (*pgxpool.Pool, error) {
+	return c.Get()
+}
+
 // Init opens a pool with opt and makes it the one GetPGX returns.
 func Init(ctx context.Context, opt postgres.Options) (*pgxpool.Pool, error) {
 	if err := c.Init(func() (*pgxpool.Pool, error) { return open(ctx, opt) }); err != nil {
 		return nil, err
 	}
-	return c.MustGet(), nil
+	return c.Get()
 }
 
 // InitDefault opens the pool from the registry unless one is already open.

@@ -4,12 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/ooqls/getset/log"
 	"github.com/ooqls/getset/registry"
-	"go.uber.org/zap"
 )
-
-var l *zap.Logger = log.NewLogger("postgres")
 
 type Options struct {
 	Host string
@@ -27,21 +23,32 @@ func (opt *Options) ConnectionString() string {
 
 var dbName string = "postgres"
 
-func GetRegistryOptions() Options {
+// GetRegistryOptions resolves Postgres settings. A nonnil passwordOverride
+// bypasses Registry password resolution, including decryption prerequisites.
+func GetRegistryOptions(passwordOverride *string) (Options, error) {
+	if !registry.IsSet() {
+		return Options{}, fmt.Errorf("Postgres Registry is not initialized")
+	}
 	reg := registry.Get()
+	if reg.Postgres == nil {
+		return Options{}, fmt.Errorf("Postgres Registry entry is missing")
+	}
 	var tlsCfg *tls.Config
 	var err error
 	if reg.Postgres.TLS != nil {
 		tlsCfg, err = reg.Postgres.TLS.TLSConfig()
 		if err != nil {
-			l.Error("failed to get TLS config", zap.Error(err))
-			panic(err)
+			return Options{}, fmt.Errorf("resolve Postgres TLS: %w", err)
 		}
 	}
-	pw, err := reg.Postgres.Server.ResolvePassword()
-	if err != nil {
-		l.Error("failed to resolve postgres password", zap.Error(err))
-		panic(err)
+	var pw string
+	if passwordOverride != nil {
+		pw = *passwordOverride
+	} else {
+		pw, err = reg.Postgres.Server.ResolvePassword()
+		if err != nil {
+			return Options{}, fmt.Errorf("resolve Postgres password: %w", err)
+		}
 	}
 
 	return Options{
@@ -51,5 +58,5 @@ func GetRegistryOptions() Options {
 		Pw:   pw,
 		DB:   dbName,
 		Tls:  tlsCfg,
-	}
+	}, nil
 }
