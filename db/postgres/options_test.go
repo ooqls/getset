@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/ooqls/getset/registry"
@@ -16,7 +18,7 @@ func TestGetRegistryOptions(t *testing.T) {
 		old := *registry.Get()
 		t.Cleanup(func() { registry.Set(old) })
 	} else {
-		_, err := postgres.GetRegistryOptions(nil)
+		_, err := GetRegistryOptions(nil)
 		require.ErrorContains(t, err, "Registry is not initialized")
 	}
 	dir := t.TempDir()
@@ -40,7 +42,7 @@ func TestGetRegistryOptions(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			registry.Set(registry.Registry{Postgres: tt.db})
-			opts, err := postgres.GetRegistryOptions(tt.override)
+			opts, err := GetRegistryOptions(tt.override)
 			if tt.wantError != "" {
 				require.ErrorContains(t, err, tt.wantError)
 				return
@@ -69,8 +71,12 @@ func TestGetRegistryOptionsDatabase(t *testing.T) {
 	t.Cleanup(func() { registry.Set(registry.Registry{}) })
 
 	registry.Set(registry.Registry{Postgres: &registry.Database{Database: "app"}})
-	assert.Equal(t, "app", GetRegistryOptions().DB)
+	opts, err := GetRegistryOptions(nil)
+	require.NoError(t, err)
+	assert.Equal(t, "app", opts.DB)
 
 	registry.Set(registry.Registry{Postgres: &registry.Database{}})
-	assert.Equal(t, "postgres", GetRegistryOptions().DB)
+	opts, err = GetRegistryOptions(nil)
+	require.NoError(t, err)
+	assert.Equal(t, "postgres", opts.DB)
 }
