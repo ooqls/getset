@@ -65,7 +65,7 @@ func (fs *Features) ordered() []feature {
 		&fs.SQLite,
 		&fs.Docs,
 		&fs.LoggingAPI,
-		// Health polls Gin or HTTP, so it serves after them.
+		// Health registers its optional endpoint after routers are initialized.
 		&fs.Health,
 	}
 }

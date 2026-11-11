@@ -14,6 +14,9 @@ import (
 )
 
 func New(appName string, features Features) *App {
+	// Feature values may be reused to configure multiple Apps; runtime state
+	// must not share status or synchronization across those Apps.
+	features.Health.state = newHealthState()
 	return &App{
 		appName:  appName,
 		l:        log.NewLogger(appName),
@@ -62,8 +65,11 @@ func (a *App) IsHealthy() bool {
 	return a.IsRunning() && a.features.Health.healthy()
 }
 
+// SetHealthCheck safely replaces the callback, including while running. An
+// active evaluation finishes with its captured callback; the next uses f.
+// A nil callback reports healthy. This method does not trigger evaluation.
 func (a *App) SetHealthCheck(f func() bool) *App {
-	a.features.Health.Check = f
+	a.features.Health.setCheck(f)
 	return a
 }
 

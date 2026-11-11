@@ -15,6 +15,9 @@ _Avoid_: plugin, module, component
 **Server Feature**:
 A Feature that accepts network traffic (Gin, HTTP, gRPC, Logging API) and so also takes part in the Serve phase.
 
+**Health check**:
+The App's assessment of whether it is healthy, independent of whether its network endpoints can be reached.
+
 **Startup phase**:
 The part of an App's life where enabled Features come up in a fixed order, before the user's startup hook runs.
 
