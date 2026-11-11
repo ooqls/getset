@@ -80,9 +80,11 @@ func (f *RedisFeature) start(ctx *AppContext, fs *Features) error {
 		db.Database = f.Database
 	}
 	if f.Username != "" {
+		db.Auth.Enabled = true
 		db.Auth.Username = f.Username
 	}
 	if f.PasswordFile != "" {
+		db.Auth.Enabled = true
 		db.Auth.PasswordFile = f.PasswordFile
 	}
 	if db.Database == "" {

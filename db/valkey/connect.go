@@ -3,6 +3,8 @@ package valkey
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/ooqls/getset/db/conn"
@@ -11,6 +13,9 @@ import (
 )
 
 var c = conn.New("valkey", func() (valkey.Client, error) {
+	if !registry.IsSet() {
+		return nil, fmt.Errorf("valkey Registry is not initialized")
+	}
 	reg := registry.Get()
 	if reg.Valkey == nil {
 		return nil, fmt.Errorf("valkey not found in registry")
@@ -22,26 +27,19 @@ var c = conn.New("valkey", func() (valkey.Client, error) {
 })
 
 func open(db *registry.Database) (valkey.Client, error) {
+	if db == nil {
+		return nil, fmt.Errorf("missing valkey Registry entry")
+	}
+	resolved, err := db.Server.Resolve(nil)
+	if err != nil {
+		return nil, fmt.Errorf("resolve valkey connection: %w", err)
+	}
 	cliOpts := valkey.ClientOption{
-		InitAddress:      []string{fmt.Sprintf("%s:%d", db.Host, db.Port)},
+		InitAddress:      []string{net.JoinHostPort(resolved.Host, strconv.Itoa(resolved.Port))},
 		ConnWriteTimeout: 5 * time.Second,
-	}
-
-	if db.TLS != nil && db.TLS.Enabled {
-		tlsCfg, err := db.TLS.TLSConfig()
-		if err != nil {
-			return nil, err
-		}
-		cliOpts.TLSConfig = tlsCfg
-	}
-
-	if db.Auth.Enabled {
-		pw, err := db.Server.ResolvePassword()
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve valkey password: %v", err)
-		}
-		cliOpts.Username = db.Auth.Username
-		cliOpts.Password = pw
+		TLSConfig:        resolved.TLS,
+		Username:         resolved.Username,
+		Password:         resolved.Password,
 	}
 
 	return valkey.NewClient(cliOpts)

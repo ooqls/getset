@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -107,9 +108,10 @@ func TestTLSConfig(t *testing.T) {
 func TestTlsConnect(t *testing.T) {
 	keyPath, certPath, caPath := writeTempCerts(t)
 
-	go http.ListenAndServeTLS("0.0.0.0:8443", certPath, keyPath, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello"))
 	}))
+	t.Cleanup(server.Close)
 
 	reg := Registry{
 		Redis: &Database{
@@ -132,13 +134,16 @@ func TestTlsConnect(t *testing.T) {
 	transport := &http.Transport{
 		TLSClientConfig: cfg,
 	}
+	t.Cleanup(transport.CloseIdleConnections)
 	client := &http.Client{
 		Transport: transport,
 	}
 	// make a request
 
-	resp, err := client.Get("https://localhost:8443") // Use the client to make the request
-	assert.NoError(t, err)
+	resp, err := client.Get(server.URL)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 

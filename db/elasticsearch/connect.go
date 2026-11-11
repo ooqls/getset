@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
@@ -35,15 +37,29 @@ type ElasticsearchOptions struct {
 // open creates a client and waits up to five seconds for the cluster to
 // answer.
 func open(opts ElasticsearchOptions) (*elasticsearch.TypedClient, error) {
+	protocol := "http"
+	if opts.TlsConfig != nil {
+		protocol = "https"
+	}
+	if opts.Protocol != "" && opts.Protocol != protocol {
+		return nil, fmt.Errorf("elasticsearch protocol %q contradicts TLS settings (expected %s)", opts.Protocol, protocol)
+	}
+	var tlsConfig *tls.Config
+	if opts.TlsConfig != nil {
+		tlsConfig = opts.TlsConfig.Clone()
+		if tlsConfig.ServerName == "" {
+			tlsConfig.ServerName = opts.Host
+		}
+	}
 	client, err := elasticsearch.NewTypedClient(elasticsearch.Config{
 		Addresses: []string{
-			fmt.Sprintf("%s://%s:%d", opts.Protocol, opts.Host, opts.Port),
+			fmt.Sprintf("%s://%s", protocol, net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port))),
 		},
 		Username:          opts.User,
 		Password:          opts.Pw,
 		EnableDebugLogger: true,
 		Transport: &http.Transport{
-			TLSClientConfig: opts.TlsConfig,
+			TLSClientConfig: tlsConfig,
 		},
 		Logger: &elastictransport.TextLogger{
 			Output:             os.Stdout,
@@ -56,6 +72,7 @@ func open(opts ElasticsearchOptions) (*elasticsearch.TypedClient, error) {
 	}
 
 	ctx := context.Background()
+	var lastErr error
 	for i := 0; i < 5; i++ {
 		if i > 0 {
 			l.Info("Retrying to connect to elasticsearch", zap.Int("attempt", i))
@@ -64,6 +81,7 @@ func open(opts ElasticsearchOptions) (*elasticsearch.TypedClient, error) {
 
 		info, err := client.Info().Do(ctx)
 		if err != nil {
+			lastErr = err
 			l.Error(fmt.Sprintf("failed to get elasticsearch info, attempt %d", i), zap.Error(err))
 			continue
 		}
@@ -72,33 +90,31 @@ func open(opts ElasticsearchOptions) (*elasticsearch.TypedClient, error) {
 		return client, nil
 	}
 
-	return nil, fmt.Errorf("failed to initialize elasticsearch client")
+	return nil, fmt.Errorf("failed to initialize elasticsearch client: %w", lastErr)
 }
 
 func openFromRegistry() (*elasticsearch.TypedClient, error) {
+	if !registry.IsSet() {
+		return nil, fmt.Errorf("elasticsearch Registry is not initialized")
+	}
 	reg := registry.Get()
 	if reg.Elasticsearch == nil {
 		return nil, fmt.Errorf("elasticsearch not found in registry")
 	}
 
-	tlsConfig, err := reg.Elasticsearch.TLS.TLSConfig()
+	resolved, err := reg.Elasticsearch.Server.Resolve(nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get TLS config: %s", err)
-	}
-
-	pw, err := reg.Elasticsearch.Server.ResolvePassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve elasticsearch password: %v", err)
+		return nil, fmt.Errorf("resolve elasticsearch connection: %w", err)
 	}
 
 	return open(ElasticsearchOptions{
 		Protocol:  reg.Elasticsearch.Protocol,
-		Host:      reg.Elasticsearch.Host,
-		Port:      reg.Elasticsearch.Port,
-		User:      reg.Elasticsearch.Auth.Username,
-		Pw:        pw,
+		Host:      resolved.Host,
+		Port:      resolved.Port,
+		User:      resolved.Username,
+		Pw:        resolved.Password,
 		DB:        reg.Elasticsearch.Database,
-		TlsConfig: tlsConfig,
+		TlsConfig: resolved.TLS,
 	})
 }
 
