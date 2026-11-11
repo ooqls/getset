@@ -2,8 +2,8 @@ package redis
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/ooqls/getset/db/conn"
@@ -12,6 +12,9 @@ import (
 )
 
 var c = conn.New("redis", func() (*redis.Client, error) {
+	if !registry.IsSet() {
+		return nil, fmt.Errorf("redis Registry is not initialized")
+	}
 	reg := registry.Get()
 	if reg.Redis == nil {
 		return nil, fmt.Errorf("no redis server found in registry")
@@ -22,13 +25,9 @@ var c = conn.New("redis", func() (*redis.Client, error) {
 })
 
 func open(db registry.Database) (*redis.Client, error) {
-	var tlsCfg *tls.Config
-	if db.TLS != nil {
-		var err error
-		tlsCfg, err = db.TLS.TLSConfig()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load tls config for redis: %v", err)
-		}
+	resolved, err := db.Server.Resolve(nil)
+	if err != nil {
+		return nil, fmt.Errorf("resolve redis connection: %w", err)
 	}
 
 	redisDb, err := strconv.Atoi(db.Database)
@@ -36,17 +35,12 @@ func open(db registry.Database) (*redis.Client, error) {
 		return nil, fmt.Errorf("failed to convert database string to int: %v", err)
 	}
 
-	pw, err := db.Server.ResolvePassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve redis password: %v", err)
-	}
-
 	return redis.NewClient(&redis.Options{
-		Addr:      fmt.Sprintf("%s:%d", db.Host, db.Port),
-		Password:  pw,
-		Username:  db.Auth.Username,
+		Addr:      net.JoinHostPort(resolved.Host, strconv.Itoa(resolved.Port)),
+		Password:  resolved.Password,
+		Username:  resolved.Username,
 		DB:        redisDb,
-		TLSConfig: tlsCfg,
+		TLSConfig: resolved.TLS,
 		PoolSize:  3,
 	}), nil
 }

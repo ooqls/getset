@@ -3,9 +3,10 @@ package sqlx
 import (
 	"fmt"
 
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // Preserve the postgres driver registration for direct sql.Open callers.
 	"github.com/ooqls/getset/db/conn"
 	"github.com/ooqls/getset/db/postgres"
 )
@@ -21,11 +22,11 @@ var c = conn.New("sqlx", func() (*sqlx.DB, error) {
 })
 
 func open(opt postgres.Options) (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", opt.ConnectionString()+"?sslmode=disable")
+	cfg, err := opt.Config()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sql: %w", err)
 	}
-	return db, nil
+	return sqlx.NewDb(stdlib.OpenDB(*cfg.ConnConfig), "pgx"), nil
 }
 
 // GetSQLX returns the database, opening it from the registry on first use.

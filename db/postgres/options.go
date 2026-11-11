@@ -3,7 +3,9 @@ package postgres
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 
 	"github.com/ooqls/getset/registry"
 )
@@ -23,7 +25,7 @@ func (opt *Options) ConnectionString() string {
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(opt.User, opt.Pw),
-		Host:   fmt.Sprintf("%s:%d", opt.Host, opt.Port),
+		Host:   net.JoinHostPort(opt.Host, strconv.Itoa(opt.Port)),
 		Path:   "/" + opt.DB,
 	}
 	return u.String()
@@ -42,22 +44,9 @@ func GetRegistryOptions(passwordOverride *string) (Options, error) {
 	if reg.Postgres == nil {
 		return Options{}, fmt.Errorf("Postgres Registry entry is missing")
 	}
-	var tlsCfg *tls.Config
-	var err error
-	if reg.Postgres.TLS != nil {
-		tlsCfg, err = reg.Postgres.TLS.TLSConfig()
-		if err != nil {
-			return Options{}, fmt.Errorf("resolve Postgres TLS: %w", err)
-		}
-	}
-	var pw string
-	if passwordOverride != nil {
-		pw = *passwordOverride
-	} else {
-		pw, err = reg.Postgres.Server.ResolvePassword()
-		if err != nil {
-			return Options{}, fmt.Errorf("resolve Postgres password: %w", err)
-		}
+	resolved, err := reg.Postgres.Server.Resolve(passwordOverride)
+	if err != nil {
+		return Options{}, fmt.Errorf("resolve Postgres connection: %w", err)
 	}
 
 	db := reg.Postgres.Database
@@ -66,11 +55,11 @@ func GetRegistryOptions(passwordOverride *string) (Options, error) {
 	}
 
 	return Options{
-		Host: reg.Postgres.Host,
-		Port: reg.Postgres.Port,
-		User: reg.Postgres.Auth.Username,
-		Pw:   pw,
+		Host: resolved.Host,
+		Port: resolved.Port,
+		User: resolved.Username,
+		Pw:   resolved.Password,
 		DB:   db,
-		Tls:  tlsCfg,
+		Tls:  resolved.TLS,
 	}, nil
 }

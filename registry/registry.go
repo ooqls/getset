@@ -1,10 +1,7 @@
 package registry
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/ooqls/getset/crypto/crypto"
@@ -17,45 +14,6 @@ type TLSConfig struct {
 	KeyPath               string `yaml:"key_path"`
 	CaPath                string `yaml:"ca_path"`
 	InsecureSkipTLSVerify bool   `yaml:"insecure_skip_tls_verify"`
-}
-
-func (cfg *TLSConfig) TLSConfig() (*tls.Config, error) {
-	if !cfg.Enabled {
-		return nil, nil
-	}
-	defaultConfig := &tls.Config{}
-	if transport, ok := http.DefaultTransport.(*http.Transport); ok {
-		if transport.TLSClientConfig != nil {
-			defaultConfig = transport.TLSClientConfig
-		}
-	}
-	if cfg.CertPath != "" && cfg.KeyPath != "" {
-		cert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
-		if err != nil {
-			return nil, err
-		}
-		if defaultConfig.Certificates == nil {
-			defaultConfig.Certificates = make([]tls.Certificate, 0)
-		}
-
-		defaultConfig.Certificates = append(defaultConfig.Certificates, cert)
-	}
-
-	if cfg.CaPath != "" {
-		caCert, err := os.ReadFile(cfg.CaPath)
-		if err != nil {
-			return nil, err
-		}
-
-		if defaultConfig.RootCAs == nil {
-			defaultConfig.RootCAs = x509.NewCertPool()
-		}
-		defaultConfig.RootCAs.AppendCertsFromPEM(caCert)
-	}
-
-	defaultConfig.InsecureSkipVerify = cfg.InsecureSkipTLSVerify
-
-	return defaultConfig, nil
 }
 
 type Auth struct {
@@ -126,7 +84,7 @@ func (a *Server) ResolvePassword() (string, error) {
 	if a.Encryption == nil {
 		return string(b), nil
 	}
-	
+
 	algo, err := a.Encryption.Algorithm()
 	if err != nil {
 		return "", fmt.Errorf("failed to get encryption algorithm: %v", err)

@@ -34,11 +34,12 @@ func TestGetRegistryOptions(t *testing.T) {
 		wantError    string
 	}{
 		{name: "missing entry", wantError: "entry is missing"},
-		{name: "plaintext", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{PasswordFile: passwordFile}}}, wantPassword: "password\n"},
-		{name: "missing password", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{PasswordFile: filepath.Join(dir, "missing")}}}, wantError: "resolve Postgres password"},
+		{name: "plaintext", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{Enabled: true, PasswordFile: passwordFile}}}, wantPassword: "password\n"},
+		{name: "missing password", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{Enabled: true, PasswordFile: filepath.Join(dir, "missing")}}}, wantError: "resolve password"},
+		{name: "disabled skips missing password", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{Username: "ignored", PasswordFile: filepath.Join(dir, "missing")}}}},
 		{name: "override bypasses missing password", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{PasswordFile: filepath.Join(dir, "missing")}}}, override: &override, wantPassword: override},
 		{name: "empty override is explicit", db: &registry.Database{Server: registry.Server{Auth: registry.Auth{PasswordFile: passwordFile}}}, override: &empty},
-		{name: "TLS error", db: &registry.Database{Server: registry.Server{TLS: &registry.TLSConfig{Enabled: true, CaPath: filepath.Join(dir, "missing-ca")}}}, wantError: "resolve Postgres TLS"},
+		{name: "TLS error", db: &registry.Database{Server: registry.Server{TLS: &registry.TLSConfig{Enabled: true, CaPath: filepath.Join(dir, "missing-ca")}}}, wantError: "resolve TLS"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			registry.Set(registry.Registry{Postgres: tt.db})

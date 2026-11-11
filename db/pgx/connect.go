@@ -20,7 +20,11 @@ var c = conn.New("pgx", func() (*pgxpool.Pool, error) {
 })
 
 func open(ctx context.Context, opt postgres.Options) (*pgxpool.Pool, error) {
-	return pgxpool.New(ctx, opt.ConnectionString())
+	cfg, err := opt.Config()
+	if err != nil {
+		return nil, err
+	}
+	return pgxpool.NewWithConfig(ctx, cfg)
 }
 
 // GetPGX returns the pool, opening it from the registry on first use. It
