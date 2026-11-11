@@ -45,7 +45,8 @@ func TestConnectPostgres(t *testing.T) {
 }
 
 func TestInitKeepsTheConnectionItOpens(t *testing.T) {
-	opts := postgres.GetRegistryOptions()
+	opts, err := postgres.GetRegistryOptions(nil)
+	require.NoError(t, err)
 
 	pool, err := pgx.Init(context.Background(), opts)
 	require.NoError(t, err)

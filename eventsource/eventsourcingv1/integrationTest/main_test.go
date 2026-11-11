@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ooqls/getset/db/bootstrap"
 	"github.com/ooqls/getset/db/containers"
-	"github.com/ooqls/getset/db/sqlx"
 	"github.com/ooqls/getset/eventsource/eventsourcingv1"
 	"github.com/ooqls/getset/eventsource/eventsourcingv1/tables"
 )
@@ -37,7 +37,11 @@ func TestMain(m *testing.M) {
 	defer cancel()
 	cont := containers.StartPostgres(ctx)
 
-	sqlx.SeedSQLX((tables.GetCreateTableStmts(eventsourcingv1.EventSource("test"))), []string{})
+	if err := bootstrap.Run(ctx, bootstrap.Plan{
+		Tables: tables.GetCreateTableStmts(eventsourcingv1.EventSource("test")),
+	}, bootstrap.SQLX("")); err != nil {
+		panic(err)
+	}
 
 	timeout := time.Second * 30
 	defer cont.Stop(ctx, &timeout)

@@ -18,6 +18,10 @@ A Feature that accepts network traffic (Gin, HTTP, gRPC, Logging API) and so als
 **Startup phase**:
 The part of an App's life where enabled Features come up in a fixed order, before the user's startup hook runs.
 
+**SQL bootstrap**:
+The database preparation an App or eventsource initialization requires before use, expressed as SQL files and table or index statements.
+_Avoid_: SQL seeding
+
 **Serve phase**:
 The part of an App's life, after the user's startup hook, where Server Features begin accepting traffic.
 
